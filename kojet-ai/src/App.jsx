@@ -1385,7 +1385,7 @@ export default function App() {
                 </form>
                 <div className="text-center mt-2 md:mt-3 hidden md:block">
                   <span className="text-[10px] md:text-[11px] font-medium text-gray-500 bg-[#161925] px-3 py-1 rounded-full border border-gray-800/50">
-                    Created by @{appSettings.ig} ✨ AI Partner Mahasiswa
+                    Created by @{appSettings.ig} ✨ AI Partner Terbaik
                   </span>
                 </div>
               </div>
