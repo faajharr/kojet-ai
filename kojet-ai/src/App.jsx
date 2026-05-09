@@ -17,7 +17,6 @@ import {
 } from "firebase/firestore";
 import * as Lucide from "lucide-react";
 
-
 const ADMIN_SECRET_COMMAND = "/admin-faajharr";
 
 // --- Firebase Initialization ---
@@ -389,7 +388,7 @@ export default function App() {
         setMessages([
           {
             role: "model",
-            text: `Salam kenal, ${nameInput}! Gue Kojet AI. Coba ketik soal tugas lu di bawah, biar gue bantu kerjain!`,
+            text: `Salam kenal, ${nameInput}! Gue Kojet AI. apa kabar hari ini! ada yang bisa saya bant?`,
           },
         ]);
       }
@@ -412,7 +411,11 @@ export default function App() {
   };
 
   const handleLogout = () => {
-    if (window.confirm("Yakin mau ganti akun/nama? Riwayat chat lo aman tersimpan kok.")) {
+    if (
+      window.confirm(
+        "Yakin mau ganti akun/nama? Riwayat chat lo aman tersimpan kok.",
+      )
+    ) {
       localStorage.removeItem("kojet_active_uid");
       localStorage.removeItem("kojet_user_name");
       localStorage.removeItem("kojet_messages_cache");
@@ -429,11 +432,20 @@ export default function App() {
 
   const handleDeleteChat = async (e, chatId) => {
     e.stopPropagation();
-    if (!window.confirm("Beneran mau hapus percakapan ini secara permanen?")) return;
+    if (!window.confirm("Beneran mau hapus percakapan ini secara permanen?"))
+      return;
 
     try {
       await deleteDoc(
-        doc(db, "artifacts", appId, "users", activeUid, "conversations", chatId),
+        doc(
+          db,
+          "artifacts",
+          appId,
+          "users",
+          activeUid,
+          "conversations",
+          chatId,
+        ),
       );
       if (currentChatId === chatId) {
         setMessages([]);
@@ -476,7 +488,15 @@ export default function App() {
       const userMessageCount = msgs.filter((m) => m.role === "user").length;
 
       await setDoc(
-        doc(db, "artifacts", appId, "users", activeUid, "conversations", chatId),
+        doc(
+          db,
+          "artifacts",
+          appId,
+          "users",
+          activeUid,
+          "conversations",
+          chatId,
+        ),
         {
           id: chatId,
           title,
@@ -502,7 +522,9 @@ export default function App() {
 
   const handleToggleSpeech = (text, index) => {
     if (!("speechSynthesis" in window)) {
-      alert("Browser lo nggak support fitur suara bro, coba update Chrome/Edge.");
+      alert(
+        "Browser lo nggak support fitur suara bro, coba update Chrome/Edge.",
+      );
       return;
     }
 
@@ -731,7 +753,7 @@ export default function App() {
         ...newMessages,
         {
           role: "model",
-          text: "Waduh sorry bro, server backend Kojet AI lagi ngadat dikit (pastikan sudah jalan di Vercel). Coba kirim ulang ya!",
+          text: "Waduh sorry bro, server backend Kojet AI lagi error dikit. Coba kirim ulang ya!",
         },
       ]);
     } finally {
@@ -902,7 +924,7 @@ export default function App() {
                   viewMode === "chat" ? "text-blue-400" : "text-emerald-400"
                 }
               />
-              {viewMode === "chat" ? "Kojet AI Workspace" : "Admin Dashboard"}
+              {viewMode === "chat" ? "Kojet AI" : "Admin Dashboard"}
             </h1>
           </div>
           <div className="flex items-center gap-3 md:gap-4 text-[10px] md:text-[11px] text-gray-400">
@@ -1098,7 +1120,7 @@ export default function App() {
                     <p className="text-gray-400 max-w-[280px] md:max-w-md text-xs md:text-sm leading-relaxed mb-6 md:mb-8">
                       {!isRegistered
                         ? "Gue asisten nugas lo. Sebelum mulai ngobrol, ketik nama panggilan lo di bawah ini dulu ya!"
-                        : "Gue Kojet AI. Ketik aja tugas kuliah lo, minta kodingan, atau upload file dokumen lo di sini."}
+                        : "Gue Kojet AI. Ketik aja tugas lo, atau ngobrol apa saja"}
                     </p>
 
                     {isRegistered && (
@@ -1247,8 +1269,8 @@ export default function App() {
                       </div>
                       <span className="text-[13px] md:text-sm font-medium bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400 animate-pulse">
                         {!isRegistered
-                          ? "Kojet lagi siapin akun lo..."
-                          : "Kojet lagi mikir..."}
+                          ? "Kojet AI lagi siapin akun lo..."
+                          : "Kojet AI lagi mikir..."}
                       </span>
                     </div>
                   </div>
