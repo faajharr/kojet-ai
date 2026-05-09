@@ -2,27 +2,30 @@
 <html lang="id">
   <head>
     <meta charset="UTF-8" />
-    
+
     <!-- Ikon Tab Browser (Favicon) - Mengarah ke file logo.png di folder public -->
     <link rel="icon" type="image/png" href="/logo.png" />
-    
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
     <meta name="theme-color" content="#0f111a" />
 
     <!-- 1. Meta Tags Standar -->
-    <title>Kojet AI | Asisten Cerdas Mahasiswa</title>
+    <title>Kojet AI | Asisten Cerdas</title>
     <meta
       name="description"
-      content="Kojet AI siap bantu kerjain tugas kuliah, makalah, sampe error kodingan. Diciptakan oleh @faajharr_"
+      content="Kojet AI siap membantu anda dalam segi apapun kecuali finansial. Diciptakan oleh @faajharr_"
     />
 
     <!-- 2. Meta Tags Khusus WhatsApp & Facebook (Open Graph) -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://kojet-ai.vercel.app/" />
-    <meta property="og:title" content="Kojet AI | Asisten Cerdas Mahasiswa" />
+    <meta property="og:title" content="Kojet AI | Asisten Cerdas" />
     <meta
       property="og:description"
-      content="Nugas makin gampang bareng Kojet AI. Siap bantu bikin makalah, PPT, sampe kodingan. Langsung gas cobain!"
+      content="Kojet AI siap membantu anda dalam segi apapun kecuali finansial. Diciptakan oleh @faajharr_. Langsung gas cobain!"
     />
 
     <!-- Preview Gambar saat link di-share (WAJIB ada file og-preview.png di folder public) -->
@@ -39,10 +42,10 @@
 
     <!-- 3. Twitter Cards (Bonus untuk Twitter/X) -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Kojet AI | Asisten Cerdas Mahasiswa" />
+    <meta name="twitter:title" content="Kojet AI | Asisten Cerdas" />
     <meta
       name="twitter:description"
-      content="Nugas makin gampang bareng Kojet AI. Coba sekarang!"
+      content="Kojet AI siap membantu anda dalam segi apapun kecuali finansial. Diciptakan oleh @faajharr_. Coba sekarang!"
     />
     <meta
       name="twitter:image"
@@ -50,20 +53,27 @@
     />
 
     <!-- Import Font Premium: Plus Jakarta Sans -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
 
     <!-- Pre-load Styling: Biar web gak putih polos pas baru dibuka -->
     <style>
       body {
         margin: 0;
         background-color: #0f111a; /* Background Kojet AI */
-        font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+        font-family:
+          "Plus Jakarta Sans",
+          system-ui,
+          -apple-system,
+          sans-serif;
         color: #ffffff;
         overflow-x: hidden;
       }
-      
+
       /* Animasi Loading Awal */
       #root:empty {
         display: flex;
@@ -72,14 +82,14 @@
         height: 100vh;
         background-color: #0f111a;
       }
-      
+
       .initial-loader {
         display: flex;
         flex-direction: column;
         align-items: center;
         gap: 20px;
       }
-      
+
       .spinner {
         width: 45px;
         height: 45px;
@@ -89,7 +99,7 @@
         border-radius: 50%;
         animation: spin 1s cubic-bezier(0.5, 0.1, 0.4, 0.9) infinite;
       }
-      
+
       .loading-text {
         font-size: 11px;
         font-weight: 800;
@@ -99,8 +109,20 @@
         animation: pulse 2s infinite;
       }
 
-      @keyframes spin { to { transform: rotate(360deg); } }
-      @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
     </style>
   </head>
   <body>
@@ -111,7 +133,7 @@
         <div class="loading-text">Menyiapkan Kojet AI...</div>
       </div>
     </div>
-    
+
     <!-- Entry point aplikasi React -->
     <script type="module" src="/src/main.jsx"></script>
   </body>
