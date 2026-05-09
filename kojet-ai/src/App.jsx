@@ -702,16 +702,36 @@ export default function App() {
     setImageAttachments((prev) => prev.filter((_, i) => i !== index));
 
   // --- BERUBAH: Fungsi ini sekarang memanggil Backend Serverless Vercel, BUKAN API Google langsung ---
-  const fetchGeminiResponse = async (chatHistory, currentImages) => {
-    // Arahkan ke file api/gemini.js di Vercel
+ const fetchGeminiResponse = async (chatHistory, currentImages) => {
+    // Arahkan ke file api/gemini.js di Vercel (bukan ke Google langsung)
     const url = `/api/gemini`;
-
-    // Payload diubah agar sesuai dengan penerimaan req.body di api/gemini.js
+    
+    // Payload diubah agar sesuai dengan penerimaan req.body di backend Vercel
     const payload = {
       history: chatHistory,
-      images: currentImages || [],
+      images: currentImages || []
     };
 
+    const delays = [1000, 2000, 4000, 8000];
+    for (let i = 0; i < 4; i++) {
+      try {
+        const response = await fetch(url, {
+          method: "POST", 
+          headers: { "Content-Type": "application/json" }, 
+          body: JSON.stringify(payload),
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) throw new Error(data.error || `HTTP error! status: ${response.status}`);
+        
+        return data.text;
+      } catch (err) {
+        if (i === 3) throw new Error("Gagal menghubungi server Vercel.");
+        await new Promise((r) => setTimeout(r, delays[i]));
+      }
+    }
+  };
     const delays = [1000, 2000, 4000, 8000];
     for (let i = 0; i < 4; i++) {
       try {
