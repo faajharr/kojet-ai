@@ -1115,7 +1115,7 @@ export default function App() {
                     <h2 className="text-2xl md:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 mb-2 md:mb-3 tracking-tight px-4">
                       {!isRegistered
                         ? "Selamat Datang di Kojet AI!"
-                        : `Tugas Apa Hari Ini, ${userName}?`}
+                        : `Hai ${userName}, Ada Yang Bisa Saya Bantu?`}
                     </h2>
                     <p className="text-gray-400 max-w-[280px] md:max-w-md text-xs md:text-sm leading-relaxed mb-6 md:mb-8">
                       {!isRegistered
