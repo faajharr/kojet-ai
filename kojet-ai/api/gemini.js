@@ -13,7 +13,7 @@ export default async function handler(req, res) {
     const apiKey = "AIzaSyB2kTofVskr3PThEQfgo8i67jIGF0iYE8c"; 
     
     // Panggil model Gemini yang terbaru dan cepat
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
     // Format riwayat pesan dari React biar dimengerti oleh Google
     const formattedMessages = history.map((m) => ({
