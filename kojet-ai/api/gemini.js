@@ -43,7 +43,12 @@ export default async function handler(req, res) {
 
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        // Tambahan header untuk memastikan Google menerima request dari Vercel
+        'x-goog-api-client': 'gl-node/18.x', 
+        'User-Agent': 'Vercel-Serverless-Function'
+      },
       body: JSON.stringify(payload)
     });
 
