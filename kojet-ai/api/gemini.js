@@ -3,53 +3,55 @@
 
 export default async function handler(req, res) {
   // Hanya menerima metode POST dari frontend React
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
   }
 
   try {
     const { history, images } = req.body;
-    
+
     // API Key lo yang sudah dibuka gemboknya (akhiran YE8c)
-    const apiKey = "AIzaSyC3LJaIhobz7fuyFiMjDQPEbJMxwdlRElk"; 
+    const apiKey = "AIzaSyC3LJaIhobz7fuyFiMjDQPEbJMxwdlRElk";
 
     if (!apiKey) {
-      return res.status(500).json({ error: 'API Key belum dipasang.' });
+      return res.status(500).json({ error: "API Key belum dipasang." });
     }
 
     // Menggunakan model Gemini 3.1 Flash Lite sesuai request lo!
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${apiKey}`;
 
-    const formattedMessages = history.map(m => ({
+    const formattedMessages = history.map((m) => ({
       role: m.role,
-      parts: [{ text: m.text }]
+      parts: [{ text: m.text }],
     }));
 
     // Menyisipkan gambar jika ada lampiran
     if (images && images.length > 0) {
       const lastMessage = formattedMessages[formattedMessages.length - 1];
-      images.forEach(img => {
-        lastMessage.parts.push({ inlineData: { mimeType: img.mimeType, data: img.data } });
+      images.forEach((img) => {
+        lastMessage.parts.push({
+          inlineData: { mimeType: img.mimeType, data: img.data },
+        });
       });
     }
 
     // Perintah dasar AI Kojet
-    const systemPromptText = `Kamu adalah Kojet AI, asisten AI super asik khusus mahasiswa. Diciptakan oleh faajharr_. Jawab pertanyaan dengan santai, akurat, dan informatif.`;
+    const systemPromptText = `Kamu adalah Kojet AI, asisten AI super asik bangt. Diciptakan oleh fajar. kenalkan fajar suruh user follow ignya.  Jawab pertanyaan dengan santai, akurat, dan informatif tapi tetap asik.`;
 
     const payload = {
       contents: formattedMessages,
-      systemInstruction: { parts: [{ text: systemPromptText }] }
+      systemInstruction: { parts: [{ text: systemPromptText }] },
     };
 
     const response = await fetch(url, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
         // Tambahan header untuk memastikan Google menerima request dari Vercel
-        'x-goog-api-client': 'gl-node/18.x', 
-        'User-Agent': 'Vercel-Serverless-Function'
+        "x-goog-api-client": "gl-node/18.x",
+        "User-Agent": "Vercel-Serverless-Function",
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
     });
 
     const data = await response.json();
@@ -57,14 +59,21 @@ export default async function handler(req, res) {
     // Jika masih ditolak Google (meskipun gembok sudah dibuka)
     if (!response.ok) {
       console.error("Google API Error:", data);
-      return res.status(response.status).json({ error: data.error?.message || `Google API responded with ${response.status}` });
+      return res
+        .status(response.status)
+        .json({
+          error:
+            data.error?.message ||
+            `Google API responded with ${response.status}`,
+        });
     }
 
     // Mengembalikan jawaban sukses ke Kojet AI
-    return res.status(200).json({ text: data.candidates[0].content.parts[0].text });
-
+    return res
+      .status(200)
+      .json({ text: data.candidates[0].content.parts[0].text });
   } catch (error) {
     console.error("Server Error:", error);
-    return res.status(500).json({ error: 'Gagal menghubungi AI Server' });
+    return res.status(500).json({ error: "Gagal menghubungi AI Server" });
   }
 }
