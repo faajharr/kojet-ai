@@ -11,7 +11,7 @@ export default async function handler(req, res) {
     const { history, images } = req.body;
 
     // API Key lo yang sudah dibuka gemboknya (akhiran YE8c)
-    const apiKey = "AIzaSyC3LJaIhobz7fuyFiMjDQPEbJMxwdlRElk";
+    const apiKey = "AIzaSyDYUKQvZmoe32ZR9Ssb-KT6irtffpZgsZw";
 
     if (!apiKey) {
       return res.status(500).json({ error: "API Key belum dipasang." });
