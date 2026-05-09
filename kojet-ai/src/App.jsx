@@ -1427,7 +1427,7 @@ export default function App() {
                           ? "Ketik nama panggilan lo buat mulai..."
                           : isListening
                             ? "Ngomong aja bro..."
-                            : "Ketik soal tugas (Rahasia admin: /admin-faajharr)..."
+                            : "Ngomong aja bro..."
                       }
                       className={`w-full bg-transparent text-gray-100 placeholder-gray-500 md:placeholder-gray-600 rounded-xl md:rounded-2xl px-1 md:px-2 py-3 md:py-3.5 focus:outline-none resize-none min-h-[44px] md:min-h-[52px] max-h-[120px] md:max-h-[200px] custom-scrollbar block text-[14px] md:text-[15px] ${isListening ? "animate-pulse text-blue-400 placeholder-blue-500" : ""}`}
                       rows={Math.min(4, (input.match(/\n/g) || []).length + 1)}
