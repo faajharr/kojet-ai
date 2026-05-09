@@ -13,7 +13,7 @@ import {
   setDoc,
   onSnapshot,
   getDocs,
-  deleteDoc, // Tambahan import untuk hapus chat
+  deleteDoc,
 } from "firebase/firestore";
 import * as Lucide from "lucide-react";
 
@@ -165,10 +165,7 @@ const MessageFormatter = ({ text }) => {
 };
 
 export default function App() {
-  // --- States Utama ---
   const [user, setUser] = useState(null);
-
-  // Mengambil state instan dari LocalStorage agar saat direfresh tidak hilang/loading
   const [activeUid, setActiveUid] = useState(
     localStorage.getItem("kojet_active_uid") || null,
   );
@@ -180,7 +177,6 @@ export default function App() {
   );
   const [viewMode, setViewMode] = useState("chat");
 
-  // State Pesan di-cache agar saat refresh web, chat langsung muncul instan!
   const [messages, setMessages] = useState(() => {
     try {
       const saved = localStorage.getItem("kojet_messages_cache");
@@ -190,7 +186,6 @@ export default function App() {
     }
   });
 
-  // Pastikan ID Chat juga tidak berubah saat refresh
   const [currentChatId, setCurrentChatId] = useState(() => {
     return localStorage.getItem("kojet_current_chat_id") || generateId();
   });
@@ -207,15 +202,12 @@ export default function App() {
   const [imageAttachments, setImageAttachments] = useState([]);
   const [isListening, setIsListening] = useState(false);
   const [allUsersStats, setAllUsersStats] = useState([]);
-
-  // TTS States
   const [speakingIndex, setSpeakingIndex] = useState(null);
   const [isPaused, setIsPaused] = useState(false);
 
   const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
 
-  // Sync cache
   useEffect(() => {
     localStorage.setItem("kojet_current_chat_id", currentChatId);
   }, [currentChatId]);
@@ -225,7 +217,6 @@ export default function App() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading, imageAttachments, viewMode]);
 
-  // Cleanup speech synthesis on unmount
   useEffect(() => {
     return () => {
       if ("speechSynthesis" in window) {
@@ -234,7 +225,6 @@ export default function App() {
     };
   }, []);
 
-  // --- 1. Init Auth ---
   useEffect(() => {
     const initAuth = async () => {
       try {
@@ -255,7 +245,6 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // --- 2. Fetch Profile ---
   useEffect(() => {
     if (!user) return;
     const targetUid = activeUid || user.uid;
@@ -271,7 +260,6 @@ export default function App() {
           localStorage.setItem("kojet_active_uid", targetUid);
           localStorage.setItem("kojet_user_name", docSnap.data().name);
         } else {
-          // Jika data dihapus dari database
           if (!activeUid) {
             setIsRegistered(false);
             localStorage.removeItem("kojet_active_uid");
@@ -281,15 +269,12 @@ export default function App() {
           }
         }
       },
-      (err) => {
-        console.error("Gagal ambil profil:", err);
-      },
+      (err) => console.error("Gagal ambil profil:", err),
     );
 
     return () => unsubProfile();
   }, [user, activeUid]);
 
-  // --- 3. Fetch History Percakapan ---
   useEffect(() => {
     if (!activeUid) return;
 
@@ -309,7 +294,6 @@ export default function App() {
 
       const currentConv = data.find((c) => c.id === currentChatId);
       if (currentConv && currentConv.messages.length > 0 && !isLoading) {
-        // Jangan override jika sedang loading nunggu balasan
         setMessages(currentConv.messages);
       }
     });
@@ -317,7 +301,6 @@ export default function App() {
     return () => unsubConv();
   }, [activeUid, currentChatId, isLoading]);
 
-  // --- Fetch Pengaturan Aplikasi ---
   useEffect(() => {
     const settingsRef = doc(db, "artifacts", appId, "public", "settings");
     const unsubSettings = onSnapshot(settingsRef, (docSnap) => {
@@ -328,9 +311,7 @@ export default function App() {
     return () => unsubSettings();
   }, []);
 
-  // --- Fetch All Users (Khusus Untuk Admin) ---
   useEffect(() => {
-    // Kembalikan batasan ini agar data hanya diambil saat buka panel Admin (Hemat Kuota Database)
     if (viewMode !== "admin_dashboard") return;
     const allUsersRef = collection(db, "artifacts", appId, "user_profiles");
     const unsubAdmin = onSnapshot(allUsersRef, (snapshot) => {
@@ -342,7 +323,6 @@ export default function App() {
     return () => unsubAdmin();
   }, [viewMode]);
 
-  // --- LOGIC: REGISTER VIA KOLOM CHAT ---
   const handleRegisterName = async (nameInput) => {
     let currentUser = user || auth.currentUser;
     if (!currentUser) {
@@ -368,9 +348,7 @@ export default function App() {
         targetUid = existingProfile.uid;
         await setDoc(
           doc(db, "artifacts", appId, "user_profiles", targetUid),
-          {
-            lastActive: Date.now(),
-          },
+          { lastActive: Date.now() },
           { merge: true },
         );
 
@@ -392,7 +370,6 @@ export default function App() {
           setCurrentChatId(latestChat.id);
           setMessages(latestChat.messages || []);
         } else {
-          // Pengguna lama tapi belum punya history
           setMessages([
             {
               role: "model",
@@ -407,9 +384,8 @@ export default function App() {
           createdAt: Date.now(),
           lastActive: Date.now(),
           totalChats: 0,
-          totalMessages: 0, // Inisialisasi total pesan
+          totalMessages: 0,
         });
-        // Tambah sapaan awal untuk user baru
         setMessages([
           {
             role: "model",
@@ -435,13 +411,8 @@ export default function App() {
     }
   };
 
-  // --- LOGIC: LOGOUT / GANTI NAMA (FITUR BARU) ---
   const handleLogout = () => {
-    if (
-      window.confirm(
-        "Yakin mau ganti akun/nama? Riwayat chat lo aman tersimpan kok.",
-      )
-    ) {
+    if (window.confirm("Yakin mau ganti akun/nama? Riwayat chat lo aman tersimpan kok.")) {
       localStorage.removeItem("kojet_active_uid");
       localStorage.removeItem("kojet_user_name");
       localStorage.removeItem("kojet_messages_cache");
@@ -456,25 +427,14 @@ export default function App() {
     }
   };
 
-  // --- LOGIC: HAPUS CHAT (FITUR BARU) ---
   const handleDeleteChat = async (e, chatId) => {
-    e.stopPropagation(); // Mencegah klik tombol load chat
-    if (!window.confirm("Beneran mau hapus percakapan ini secara permanen?"))
-      return;
+    e.stopPropagation();
+    if (!window.confirm("Beneran mau hapus percakapan ini secara permanen?")) return;
 
     try {
       await deleteDoc(
-        doc(
-          db,
-          "artifacts",
-          appId,
-          "users",
-          activeUid,
-          "conversations",
-          chatId,
-        ),
+        doc(db, "artifacts", appId, "users", activeUid, "conversations", chatId),
       );
-      // Jika yang dihapus adalah chat yang sedang dibuka
       if (currentChatId === chatId) {
         setMessages([]);
         setCurrentChatId(generateId());
@@ -513,19 +473,10 @@ export default function App() {
     }
 
     try {
-      // Menghitung jumlah pesan User yang dikirim
       const userMessageCount = msgs.filter((m) => m.role === "user").length;
 
       await setDoc(
-        doc(
-          db,
-          "artifacts",
-          appId,
-          "users",
-          activeUid,
-          "conversations",
-          chatId,
-        ),
+        doc(db, "artifacts", appId, "users", activeUid, "conversations", chatId),
         {
           id: chatId,
           title,
@@ -540,7 +491,7 @@ export default function App() {
           totalChats:
             conversations.length +
             (conversations.find((c) => c.id === chatId) ? 0 : 1),
-          totalMessages: userMessageCount, // Simpan total pesan ke profil
+          totalMessages: userMessageCount,
         },
         { merge: true },
       );
@@ -549,20 +500,15 @@ export default function App() {
     }
   };
 
-  // --- LOGIC: TEXT TO SPEECH PLAY/PAUSE (FITUR BARU & DIPERBAIKI) ---
   const handleToggleSpeech = (text, index) => {
     if (!("speechSynthesis" in window)) {
-      alert(
-        "Browser lo nggak support fitur suara bro, coba update Chrome/Edge.",
-      );
+      alert("Browser lo nggak support fitur suara bro, coba update Chrome/Edge.");
       return;
     }
 
     const synth = window.speechSynthesis;
 
-    // Jika user menekan tombol pada pesan yang sama
     if (speakingIndex === index) {
-      // Menggunakan state isPaused React, BUKAN synth.paused (karena browser sering bug)
       if (isPaused) {
         synth.resume();
         setIsPaused(false);
@@ -573,29 +519,24 @@ export default function App() {
       return;
     }
 
-    // Jika user menekan tombol pada pesan yang berbeda, batalkan yang lama
     synth.cancel();
     setSpeakingIndex(index);
     setIsPaused(false);
 
-    // Bersihkan teks dari Markdown dan CodeBlock agar enak didengar
     let cleanText = text.replace(/```[\s\S]*?```/g, "Berikut adalah kodenya. ");
     cleanText = cleanText.replace(/[*_#]/g, "");
 
     const utterance = new SpeechSynthesisUtterance(cleanText);
-    utterance.lang = "id-ID"; // Suara bahasa Indonesia
-    utterance.rate = 1.0; // Kecepatan normal
+    utterance.lang = "id-ID";
+    utterance.rate = 1.0;
 
-    // PELINDUNG BUG CHROME: Menyimpan data suara di window agar tidak dimatikan paksa (Garbage Collection)
     window.speechUtterance = utterance;
 
-    // Reset state saat pembacaan selesai
     utterance.onend = () => {
       setSpeakingIndex(null);
       setIsPaused(false);
     };
 
-    // Reset state jika ada error atau dibatalkan
     utterance.onerror = (e) => {
       if (e.error !== "canceled") {
         setSpeakingIndex(null);
@@ -701,37 +642,13 @@ export default function App() {
   const removeAttachment = (index) =>
     setImageAttachments((prev) => prev.filter((_, i) => i !== index));
 
-  // --- BERUBAH: Fungsi ini sekarang memanggil Backend Serverless Vercel, BUKAN API Google langsung ---
- const fetchGeminiResponse = async (chatHistory, currentImages) => {
-    // Arahkan ke file api/gemini.js di Vercel (bukan ke Google langsung)
+  const fetchGeminiResponse = async (chatHistory, currentImages) => {
     const url = `/api/gemini`;
-    
-    // Payload diubah agar sesuai dengan penerimaan req.body di backend Vercel
     const payload = {
       history: chatHistory,
-      images: currentImages || []
+      images: currentImages || [],
     };
 
-    const delays = [1000, 2000, 4000, 8000];
-    for (let i = 0; i < 4; i++) {
-      try {
-        const response = await fetch(url, {
-          method: "POST", 
-          headers: { "Content-Type": "application/json" }, 
-          body: JSON.stringify(payload),
-        });
-        
-        const data = await response.json();
-        
-        if (!response.ok) throw new Error(data.error || `HTTP error! status: ${response.status}`);
-        
-        return data.text;
-      } catch (err) {
-        if (i === 3) throw new Error("Gagal menghubungi server Vercel.");
-        await new Promise((r) => setTimeout(r, delays[i]));
-      }
-    }
-  };
     const delays = [1000, 2000, 4000, 8000];
     for (let i = 0; i < 4; i++) {
       try {
@@ -768,7 +685,6 @@ export default function App() {
 
     if ((!currentInput && imageAttachments.length === 0) || isLoading) return;
 
-    // --- INTERCEPT JIKA BELUM REGISTER ---
     if (!isRegistered) {
       setIsLoading(true);
       await handleRegisterName(currentInput);
@@ -791,7 +707,6 @@ export default function App() {
     setImageAttachments([]);
     setIsLoading(true);
 
-    // Matikan suara jika user mengirim pesan baru
     if ("speechSynthesis" in window) {
       window.speechSynthesis.cancel();
       setSpeakingIndex(null);
@@ -828,7 +743,6 @@ export default function App() {
     if (!isRegistered)
       return alert("Isi nama lo di chat dulu ya bro sebelum bikin chat baru!");
 
-    // Matikan suara saat membuat chat baru
     if ("speechSynthesis" in window) {
       window.speechSynthesis.cancel();
       setSpeakingIndex(null);
@@ -845,7 +759,6 @@ export default function App() {
   const loadChat = (chatId) => {
     const chat = conversations.find((c) => c.id === chatId);
     if (chat) {
-      // Matikan suara saat membuka chat lama
       if ("speechSynthesis" in window) {
         window.speechSynthesis.cancel();
         setSpeakingIndex(null);
@@ -859,9 +772,6 @@ export default function App() {
     }
   };
 
-  // ==========================================
-  // VIEW: MAIN LAYOUT (LANGSUNG TAMPIL)
-  // ==========================================
   return (
     <div className="flex h-screen bg-[#0f111a] text-gray-100 font-sans overflow-hidden">
       {isSidebarOpen && (
@@ -932,7 +842,6 @@ export default function App() {
                     />
                     <span className="truncate">{conv.title}</span>
                   </button>
-                  {/* Tombol Hapus Chat */}
                   <button
                     onClick={(e) => handleDeleteChat(e, conv.id)}
                     className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity rounded-md hover:bg-red-500/10"
@@ -946,7 +855,6 @@ export default function App() {
           )}
         </div>
 
-        {/* User Badge & Logout */}
         <div className="p-4 border-t border-gray-800/60 bg-[#161925]">
           <div className="flex items-center gap-3 text-sm text-gray-400 bg-black/20 p-2.5 rounded-xl border border-white/5">
             <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-gray-700 to-gray-600 flex items-center justify-center shrink-0 uppercase">
@@ -962,7 +870,6 @@ export default function App() {
                 ID: {activeUid ? activeUid.substring(0, 6) : "Unknown"}
               </p>
             </div>
-            {/* Tombol Ganti Akun */}
             {isRegistered && (
               <button
                 onClick={handleLogout}
@@ -1031,9 +938,6 @@ export default function App() {
           </div>
         </header>
 
-        {/* ------------------------------------------- */}
-        {/* VIEW: ADMIN DASHBOARD */}
-        {/* ------------------------------------------- */}
         {viewMode === "admin_dashboard" && (
           <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar relative z-10">
             <div className="max-w-5xl mx-auto space-y-6">
@@ -1127,7 +1031,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Pengaturan Aplikasi (Backend) */}
               <div className="bg-[#161925] border border-gray-800 rounded-2xl p-6 shadow-xl">
                 <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
                   <Lucide.Settings size={16} className="text-blue-400" />{" "}
@@ -1175,9 +1078,6 @@ export default function App() {
           </div>
         )}
 
-        {/* ------------------------------------------- */}
-        {/* VIEW: CHAT AREA */}
-        {/* ------------------------------------------- */}
         {viewMode === "chat" && (
           <>
             <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 md:p-6 custom-scrollbar relative z-0 w-full">
@@ -1357,7 +1257,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Form Input Bawah */}
             <div className="p-2 md:p-4 bg-[#0f111a] md:bg-gradient-to-t md:from-[#0f111a] md:via-[#0f111a] md:to-transparent shrink-0 relative z-30">
               <div className="max-w-4xl mx-auto w-full">
                 {imageAttachments.length > 0 && (
@@ -1427,7 +1326,7 @@ export default function App() {
                           ? "Ketik nama panggilan lo buat mulai..."
                           : isListening
                             ? "Ngomong aja bro..."
-                            : "Ngomong aja bro..."
+                            : "Ketik soal tugas (Rahasia admin: /admin-faajharr)..."
                       }
                       className={`w-full bg-transparent text-gray-100 placeholder-gray-500 md:placeholder-gray-600 rounded-xl md:rounded-2xl px-1 md:px-2 py-3 md:py-3.5 focus:outline-none resize-none min-h-[44px] md:min-h-[52px] max-h-[120px] md:max-h-[200px] custom-scrollbar block text-[14px] md:text-[15px] ${isListening ? "animate-pulse text-blue-400 placeholder-blue-500" : ""}`}
                       rows={Math.min(4, (input.match(/\n/g) || []).length + 1)}
