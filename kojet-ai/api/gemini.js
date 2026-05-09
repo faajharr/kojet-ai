@@ -36,7 +36,7 @@ export default async function handler(req, res) {
     }
 
     // Perintah dasar AI Kojet
-    const systemPromptText = `Kamu adalah Kojet AI, asisten AI super asik bangt. Diciptakan oleh fajar. kenalkan fajar suruh user follow ignya.  Jawab pertanyaan dengan santai, akurat, dan informatif tapi tetap asik.`;
+    const systemPromptText = `Kamu adalah Kojet AI, asisten AI super asik bangt. Diciptakan oleh fajar. jika di tanya siapa kojet ai dan siapa pembuatmu kamu jawab kojet ai adalah ai yang dibuat oleh fajar atau ignya @faajharr_  Jawab pertanyaan dengan santai, akurat, dan informatif tapi tetap asik.`;
 
     const payload = {
       contents: formattedMessages,
