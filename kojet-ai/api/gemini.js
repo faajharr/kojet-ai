@@ -1,65 +1,65 @@
 // api/gemini.js
+// File ini berjalan di SERVER Vercel, bukan di browser pengguna.
 
 export default async function handler(req, res) {
-  // Hanya izinkan request POST
+  // Hanya menerima metode POST dari frontend React
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Metode tidak diizinkan. Harus POST.' });
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
     const { history, images } = req.body;
-
-    // Masukkan API Key Google Lo di sini (Gue pakein yang sempet lo kirim kemaren)
-    const apiKey = "AIzaSyB2kTofVskr3PThEQfgo8i67jIGF0iYE8c"; 
     
-    // Panggil model Gemini yang terbaru dan cepat
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+    // API Key lo yang sudah dibuka gemboknya (akhiran YE8c)
+    const apiKey = "AIzaSyB2kTofVskr3PThEQfgo8i67jIGF0iYE8c"; 
 
-    // Format riwayat pesan dari React biar dimengerti oleh Google
-    const formattedMessages = history.map((m) => ({
+    if (!apiKey) {
+      return res.status(500).json({ error: 'API Key belum dipasang.' });
+    }
+
+    // Menggunakan model Gemini 3.1 Flash Lite sesuai request lo!
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${apiKey}`;
+
+    const formattedMessages = history.map(m => ({
       role: m.role,
-      parts: [{ text: m.text }],
+      parts: [{ text: m.text }]
     }));
 
-    // Sisipkan gambar kalau ada
+    // Menyisipkan gambar jika ada lampiran
     if (images && images.length > 0) {
       const lastMessage = formattedMessages[formattedMessages.length - 1];
-      images.forEach((img) => {
-        lastMessage.parts.push({
-          inlineData: { mimeType: img.mimeType, data: img.data },
-        });
+      images.forEach(img => {
+        lastMessage.parts.push({ inlineData: { mimeType: img.mimeType, data: img.data } });
       });
     }
 
-    // Perintah dasar AI-nya
-    const systemInstructionText = "Kamu adalah Kojet AI, asisten AI super asik khusus mahasiswa. Diciptakan oleh faajharr_. Jawab pertanyaan dengan santai tapi informatif.";
+    // Perintah dasar AI Kojet
+    const systemPromptText = `Kamu adalah Kojet AI, asisten AI super asik khusus mahasiswa. Diciptakan oleh faajharr_. Jawab pertanyaan dengan santai, akurat, dan informatif.`;
 
     const payload = {
       contents: formattedMessages,
-      systemInstruction: { parts: [{ text: systemInstructionText }] }
+      systemInstruction: { parts: [{ text: systemPromptText }] }
     };
 
-    // Tembak ke server Google
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(payload)
     });
 
     const data = await response.json();
 
-    // Kalau Google nolak (misal API key expired)
+    // Jika masih ditolak Google (meskipun gembok sudah dibuka)
     if (!response.ok) {
-      console.error("Error Google API:", data);
-      return res.status(response.status).json({ error: data.error?.message || 'Error dari Google' });
+      console.error("Google API Error:", data);
+      return res.status(response.status).json({ error: data.error?.message || `Google API responded with ${response.status}` });
     }
 
-    // Ambil teks balasannya dan kirim ke Frontend (App.jsx) lo
-    const textResponse = data.candidates[0].content.parts[0].text;
-    return res.status(200).json({ text: textResponse });
+    // Mengembalikan jawaban sukses ke Kojet AI
+    return res.status(200).json({ text: data.candidates[0].content.parts[0].text });
 
   } catch (error) {
-    console.error("Backend Error:", error);
-    return res.status(500).json({ error: 'Server backend Kojet AI lagi ngadat.' });
+    console.error("Server Error:", error);
+    return res.status(500).json({ error: 'Gagal menghubungi AI Server' });
   }
 }
