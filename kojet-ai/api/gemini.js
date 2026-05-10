@@ -11,7 +11,7 @@ export default async function handler(req, res) {
     const { history, images } = req.body;
 
     // API Key lo yang sudah dibuka gemboknya (akhiran YE8c)
-    const apiKey = "AIzaSyCfUkaW2Ri6pj4l9ELgeKZaUbErDeK1SD4";
+    process.env.GOOGLE_AI_KEY;
 
     if (!apiKey) {
       return res.status(500).json({ error: "API Key belum dipasang." });
