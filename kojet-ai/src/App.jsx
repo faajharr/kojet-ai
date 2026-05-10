@@ -1140,7 +1140,7 @@ export default function App() {
                         <button
                           onClick={() =>
                             setInput(
-                              "Bro, bantu buatin gue makalah 3 paragraf tentang Pengaruh AI dong.",
+                              "Kojet AI itu apa?",
                             )
                           }
                           className="p-3.5 md:p-4 rounded-xl md:rounded-2xl border border-white/5 bg-white/5 hover:bg-white/10 text-[13px] md:text-sm text-gray-300 transition-all hover:scale-[1.02] group"
