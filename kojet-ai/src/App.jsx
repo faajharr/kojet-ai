@@ -823,7 +823,8 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen bg-[#0f111a] text-gray-100 font-sans overflow-hidden">
+    // DI SINI KUNCI PERBAIKANNYA: Pakai fixed inset-0 agar layar 100% dipaku & gak bisa scroll dari luar
+    <div className="fixed inset-0 flex bg-[#0f111a] text-gray-100 font-sans overflow-hidden">
       {isSidebarOpen && (
         <div
           className="fixed inset-0 bg-black/70 z-40 md:hidden backdrop-blur-sm transition-opacity"
@@ -905,7 +906,6 @@ export default function App() {
           )}
         </div>
 
-        {/* INFO UPDATE SIDEBAR (KINI BISA DI-KLIK/DIBUKA-TUTUP) */}
         <div className="px-4 py-3 border-t border-gray-800/60 bg-[#12141c]">
           <button
             onClick={() => setShowUpdateInfo(!showUpdateInfo)}
@@ -970,10 +970,12 @@ export default function App() {
       </aside>
 
       {/* --- MAIN AREA --- */}
-      <main className="flex-1 flex flex-col relative min-w-0 bg-[#0f111a] w-full max-w-full">
+      {/* DI SINI PERBAIKANNYA: h-full dan overflow-hidden agar area ini terkunci dan tidak bisa scroll */}
+      <main className="flex-1 flex flex-col h-full relative min-w-0 bg-[#0f111a] w-full max-w-full overflow-hidden">
         <div className="absolute top-0 left-1/4 w-[300px] md:w-[500px] h-[300px] md:h-[500px] bg-blue-600/10 rounded-full blur-[100px] md:blur-[120px] pointer-events-none"></div>
 
-        <header className="h-14 md:h-16 flex items-center justify-between px-3 md:px-6 border-b border-white/5 bg-[#0f111a]/80 backdrop-blur-xl sticky top-0 z-20 shrink-0">
+        {/* DI SINI PERBAIKANNYA: flex-none biar Headernya jadi batu dan gak gerak sama sekali */}
+        <header className="h-14 md:h-16 flex-none flex items-center justify-between px-3 md:px-6 border-b border-white/5 bg-[#0f111a]/95 backdrop-blur-xl relative z-20">
           <div className="flex items-center gap-2 md:gap-3">
             <button
               onClick={() => setIsSidebarOpen(true)}
@@ -1140,15 +1142,15 @@ export default function App() {
                         <button
                           onClick={() =>
                             setInput(
-                              "Kojet AI itu apa?",
+                              "Bro, bantu buatin gue makalah 3 paragraf tentang Pengaruh AI dong.",
                             )
                           }
                           className="p-3.5 md:p-4 rounded-xl md:rounded-2xl border border-white/5 bg-white/5 hover:bg-white/10 text-[13px] md:text-sm text-gray-300 transition-all hover:scale-[1.02] group"
                         >
                           <span className="flex items-center gap-2 text-blue-400 font-medium mb-1">
-                            <Lucide.Feather size={14} /> KOJET AI?
+                            <Lucide.FileText size={14} /> Bikin Esai / Makalah
                           </span>
-                          "Kojet AI itu apa?"
+                          "Bantu gue buatin makalah 3 paragraf tentang AI..."
                         </button>
                         <button
                           onClick={handleGenerateMode}
