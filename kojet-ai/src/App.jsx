@@ -1133,7 +1133,7 @@ export default function App() {
                     <p className="text-gray-400 max-w-[280px] md:max-w-md text-xs md:text-sm leading-relaxed mb-6 md:mb-8">
                       {!isRegistered
                         ? "Gue Kojet AI. Ketik nama panggilan lo di bawah ini dulu ya bro biar kita bisa mulai ngobrol!"
-                        : "Santai aja bro. Ketik aja mau ngobrol apa, bisa dibantu ngerjain macem-macem, upload file DOCX/PDF, atau generate gambar!"}
+                        : "Selamat datang di kojet ai. Ketik aja mau ngobrol apa, bisa dibantu ngerjain macem-macem, upload file DOCX/PDF, atau generate gambar!"}
                     </p>
 
                     {isRegistered && (
@@ -1141,24 +1141,24 @@ export default function App() {
                         <button
                           onClick={() =>
                             setInput(
-                              "Bro, bantu buatin gue makalah 3 paragraf tentang Pengaruh AI dong.",
+                              "Apa itu kojet ai",
                             )
                           }
                           className="p-3.5 md:p-4 rounded-xl md:rounded-2xl border border-white/5 bg-white/5 hover:bg-white/10 text-[13px] md:text-sm text-gray-300 transition-all hover:scale-[1.02] group"
                         >
                           <span className="flex items-center gap-2 text-blue-400 font-medium mb-1">
-                            <Lucide.FileText size={14} /> Bikin Esai / Makalah
+                            <Lucide.Feather size={14} /> Kojet AI?
                           </span>
-                          "Bantu gue buatin makalah 3 paragraf tentang AI..."
+                          "Bro, apa itu kojet ai"
                         </button>
                         <button
                           onClick={handleGenerateMode}
                           className="p-3.5 md:p-4 rounded-xl md:rounded-2xl border border-white/5 bg-white/5 hover:bg-white/10 text-[13px] md:text-sm text-gray-300 transition-all hover:scale-[1.02] group"
                         >
                           <span className="flex items-center gap-2 text-purple-400 font-medium mb-1">
-                            <Lucide.ImagePlus size={14} /> Generate Foto
+                            <Lucide.BookOpenText size={14} /> Bikin Makalah
                           </span>
-                          "Tolong buatkan foto dengan gaya..."
+                          "Tolong buatkan makalah tentang...."
                         </button>
                       </div>
                     )}
