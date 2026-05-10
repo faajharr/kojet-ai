@@ -377,10 +377,10 @@ export default function App() {
     }
   };
 
-  // --- SOLUSI AMPUH: REGISTRASI NAMA INSTAN TANPA LOADING ---
+  // --- SOLUSI AMPUH: REGISTRASI NAMA INSTAN & TAMPIL HALAMAN UTAMA ---
   const handleRegisterName = (nameInput) => {
     let currentUser = user || auth.currentUser;
-    if (!currentUser) return; // Silent return bila koneksi Firebase belum siap sepenuhnya
+    if (!currentUser) return;
 
     let targetUid = currentUser.uid;
 
@@ -392,18 +392,14 @@ export default function App() {
     localStorage.setItem("kojet_active_uid", targetUid);
     localStorage.setItem("kojet_user_name", nameInput);
 
-    const welcomeMsg = {
-      role: "model",
-      text: `Halo ${nameInput}! Gue Kojet AI. Gaya gue asik dan santai bro. Hari ini ada tugas kuliah atau hal lain yang mau kita bahas?`,
-    };
+    // KOSONGKAN ARRAY PESAN AGAR HALAMAN UTAMA "HAI USER" LANGSUNG MUNCUL
+    setMessages([]);
 
-    setMessages([welcomeMsg]);
-
-    // Pastikan ID chat baru agar tidak numpuk
+    // Pastikan ID chat baru disiapkan
     const newChatId = generateId();
     setCurrentChatId(newChatId);
 
-    // 2. SIMPAN DATA KE FIREBASE SECARA DIAM-DIAM DI BACKGROUND (Gak akan bikin UI nyangkut/stuck)
+    // 2. SIMPAN DATA KE FIREBASE SECARA DIAM-DIAM DI BACKGROUND
     setDoc(
       doc(db, "artifacts", appId, "user_profiles", targetUid),
       {
@@ -416,8 +412,6 @@ export default function App() {
       },
       { merge: true },
     ).catch((err) => console.error(err));
-
-    saveConversation(newChatId, [welcomeMsg], targetUid);
   };
 
   const handleLogout = () => {
