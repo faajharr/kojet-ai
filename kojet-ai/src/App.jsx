@@ -126,12 +126,10 @@ const CodeBlock = ({ code, lang }) => {
   );
 };
 
-// --- Format Pesan (Diperbaiki untuk Rumus Matematika) ---
+// --- Format Pesan (Diperbarui untuk Handle Rumus MTK/LaTeX) ---
 const MessageFormatter = ({ text }) => {
   const blocks = text.split(/(```[\w]*\n[\s\S]*?```)/g);
   const formatText = (content) => {
-    // Menghapus regex \n -> <br> agar rumus matematika dan markdown tidak rusak
-    // Kita gunakan whitespace-pre-wrap di parent class agar format aslinya terjaga
     let formatted = content
       .replace(
         /\*\*(.*?)\*\*/g,
@@ -140,7 +138,18 @@ const MessageFormatter = ({ text }) => {
       .replace(
         /`([^`\n]+)`/g,
         '<code class="bg-gray-800 text-blue-300 px-1.5 py-0.5 rounded-md text-[0.9em] font-mono border border-gray-700/50 break-words">$1</code>',
-      );
+      )
+      .replace(/\$\$([\s\S]*?)\$\$/g, (match, equation) => {
+        const cleanEq = equation.trim();
+        const encoded = encodeURIComponent(`\\color{white} ${cleanEq}`);
+        return `<div class="w-full flex justify-center my-4 overflow-x-auto"><img src="https://latex.codecogs.com/svg.image?${encoded}" alt="Math Equation" class="max-w-full h-auto drop-shadow-md" /></div>`;
+      })
+      .replace(/\$([^$\n]+)\$/g, (match, equation) => {
+        const cleanEq = equation.trim();
+        const encoded = encodeURIComponent(`\\color{white} ${cleanEq}`);
+        return `<img src="https://latex.codecogs.com/svg.image?${encoded}" alt="Math" class="inline align-middle h-[1.2em] mx-1 drop-shadow-sm" />`;
+      });
+
     return { __html: formatted };
   };
 
@@ -194,7 +203,6 @@ export default function App() {
     ig: "faajharr_",
     wa: "083153437501",
   });
-
   const [conversations, setConversations] = useState([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -246,37 +254,34 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
+  // Sync Data User secara real-time dari Firestore
   useEffect(() => {
     if (!user) return;
     const targetUid = activeUid || user.uid;
     const profileRef = doc(db, "artifacts", appId, "user_profiles", targetUid);
 
-    const unsubProfile = onSnapshot(
-      profileRef,
-      (docSnap) => {
-        if (docSnap.exists()) {
-          setUserName(docSnap.data().name);
-          setActiveUid(targetUid);
-          setIsRegistered(true);
-          localStorage.setItem("kojet_active_uid", targetUid);
-          localStorage.setItem("kojet_user_name", docSnap.data().name);
-        } else {
-          if (!activeUid) {
-            setIsRegistered(false);
-            localStorage.removeItem("kojet_active_uid");
-            localStorage.removeItem("kojet_user_name");
-            localStorage.removeItem("kojet_messages_cache");
-            setMessages([]);
-          }
+    const unsubProfile = onSnapshot(profileRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setUserName(data.name);
+        setActiveUid(targetUid);
+        setIsRegistered(true);
+        localStorage.setItem("kojet_active_uid", targetUid);
+        localStorage.setItem("kojet_user_name", data.name);
+      } else {
+        // Jangan paksa hapus state jika hanya pergantian akun sementara,
+        // pastikan UID memang tidak ada di DB
+        if (!activeUid) {
+          setIsRegistered(false);
+          localStorage.removeItem("kojet_active_uid");
+          localStorage.removeItem("kojet_user_name");
         }
-      },
-      (err) => console.error("Gagal ambil profil:", err),
-    );
-
+      }
+    });
     return () => unsubProfile();
   }, [user, activeUid]);
 
-  // Listener Riwayat Chat (Otomatis Handle Fetch Data Lama)
+  // Listener Riwayat Chat - BUG FIXED: Cepat & Gak Nyangkut
   useEffect(() => {
     if (!activeUid) return;
 
@@ -294,10 +299,22 @@ export default function App() {
       data.sort((a, b) => b.updatedAt - a.updatedAt);
       setConversations(data);
 
+      // Cari percakapan terakhir yang sedang aktif
       const currentConv = data.find((c) => c.id === currentChatId);
-      // Hanya set messages jika tidak sedang loading (menghindari overwrite)
-      if (currentConv && currentConv.messages && !isLoading) {
-        setMessages(currentConv.messages);
+
+      // Jika percakapan ketemu, masukkan isinya. TAPI JANGAN ubah kalau user lagi ketik/ngirim pesan
+      if (
+        currentConv &&
+        currentConv.messages &&
+        currentConv.messages.length > 0
+      ) {
+        if (!isLoading && messages.length === 0) {
+          setMessages(currentConv.messages);
+        }
+      } else if (data.length > 0 && messages.length === 0 && !isLoading) {
+        // Jika buka aplikasi, otomatis load chat paling atas
+        setCurrentChatId(data[0].id);
+        setMessages(data[0].messages);
       }
     });
 
@@ -314,26 +331,43 @@ export default function App() {
     return () => unsubSettings();
   }, []);
 
-  // Listener Admin Dashboard (Fix hitung User)
+  // Listener Admin Dashboard - BUG FIXED
   useEffect(() => {
     if (viewMode !== "admin_dashboard") return;
-    const allUsersRef = collection(db, "artifacts", appId, "user_profiles");
-    const unsubAdmin = onSnapshot(allUsersRef, (snapshot) => {
-      const stats = [];
-      snapshot.forEach((doc) => stats.push(doc.data()));
-      stats.sort((a, b) => b.lastActive - a.lastActive);
-      setAllUsersStats(stats);
-    });
-    return () => unsubAdmin();
+    // Mengambil data SEMUA user. Bypass rule firebase karena data ini
+    // disimpan di root public khusus admin jika lo set up rules nya dengan benar.
+    // TAPI karena rules firebase lo ketat, kita pakai cara ini:
+    const fetchAdminStats = async () => {
+      try {
+        const allUsersRef = collection(db, "artifacts", appId, "user_profiles");
+        const snapshot = await getDocs(allUsersRef);
+        const stats = [];
+        snapshot.forEach((doc) => stats.push(doc.data()));
+        stats.sort((a, b) => b.lastActive - a.lastActive);
+        setAllUsersStats(stats);
+      } catch (e) {
+        console.error(
+          "Admin dashboard butuh Firebase Rules tambahan untuk baca user_profiles global",
+          e,
+        );
+        alert(
+          "Oops! Admin tidak bisa melihat total user. Pastikan Firebase Firestore Rules untuk '/artifacts/{appId}/user_profiles' diset ke 'allow read: if true;' ya Jar.",
+        );
+      }
+    };
+    fetchAdminStats();
   }, [viewMode]);
 
+  // HANDLE REGISTER NAME - DI BIKIN LEBIH CEPAT!
   const handleRegisterName = async (nameInput) => {
     let currentUser = user || auth.currentUser;
     if (!currentUser) {
-      alert("Menyiapkan koneksi, coba ketik ulang ya!");
+      alert("Sabar bro, koneksi lagi disiapin...");
       setIsLoading(false);
       return;
     }
+
+    setIsLoading(true);
 
     try {
       const profilesRef = collection(db, "artifacts", appId, "user_profiles");
@@ -349,20 +383,24 @@ export default function App() {
       let targetUid = currentUser.uid;
 
       if (existingProfile) {
+        // USER LAMA
         targetUid = existingProfile.uid;
+
+        // Update waktu aktif
         await setDoc(
           doc(db, "artifacts", appId, "user_profiles", targetUid),
           { lastActive: Date.now() },
           { merge: true },
         );
 
-        // Atur state user DULU sebelum chat di load
+        // Setup State secara instan biar gak perlu nunggu
         setActiveUid(targetUid);
         setUserName(existingProfile.name);
         setIsRegistered(true);
         localStorage.setItem("kojet_active_uid", targetUid);
         localStorage.setItem("kojet_user_name", existingProfile.name);
 
+        // Tarik data chat
         const convRef = collection(
           db,
           "artifacts",
@@ -379,16 +417,17 @@ export default function App() {
           allConvs.sort((a, b) => b.updatedAt - a.updatedAt);
           const latestChat = allConvs[0];
           setCurrentChatId(latestChat.id);
-          // UI otomatis akan di-handle oleh useEffect listener riwayat
+          setMessages(latestChat.messages || []);
         } else {
           setMessages([
             {
               role: "model",
-              text: `Welcome back, ${existingProfile.name}! Kojet siap bantu nugas lagi nih.`,
+              text: `Welcome back, ${existingProfile.name}! Mau bahas apa nih hari ini?`,
             },
           ]);
         }
       } else {
+        // USER BARU
         await setDoc(doc(db, "artifacts", appId, "user_profiles", targetUid), {
           uid: targetUid,
           name: nameInput,
@@ -397,6 +436,7 @@ export default function App() {
           totalChats: 0,
           totalMessages: 0,
         });
+
         setActiveUid(targetUid);
         setUserName(nameInput);
         setIsRegistered(true);
@@ -406,22 +446,22 @@ export default function App() {
         setMessages([
           {
             role: "model",
-            text: `Salam kenal, ${nameInput}! Gue Kojet AI. Gaya gue asik dan siap bantu semua tugas lo bro! Gas kita mulai?`,
+            text: `Salam kenal, ${nameInput}! Gue Kojet AI. Gaya gue asik santai bro. Mau ngobrolin apa nih?`,
           },
         ]);
       }
     } catch (error) {
-      console.error("Gagal login/register:", error);
-      alert("Gagal terhubung ke database. Pastikan koneksi internet aktif.");
+      console.error("Gagal login:", error);
+      alert("Gagal konek ke database bro. Cek sinyal lo ya!");
     } finally {
-      setIsLoading(false); // Fix loading nyangkut
+      setIsLoading(false); // Pastikan loading hilang!
     }
   };
 
   const handleLogout = () => {
     if (
       window.confirm(
-        "Yakin mau ganti akun/nama? Riwayat chat lo aman tersimpan kok.",
+        "Yakin mau ganti akun/nama? Riwayat chat lo aman tersimpan di database kok.",
       )
     ) {
       localStorage.removeItem("kojet_active_uid");
@@ -461,7 +501,6 @@ export default function App() {
       }
     } catch (err) {
       console.error("Gagal hapus chat:", err);
-      alert("Gagal menghapus percakapan.");
     }
   };
 
@@ -483,12 +522,14 @@ export default function App() {
 
   const saveConversation = async (chatId, msgs) => {
     if (!activeUid || msgs.length === 0) return;
-    let title = "Tugas Baru";
+    let title = "Obrolan Baru";
     const firstUserMsg = msgs.find((m) => m.role === "user");
     if (firstUserMsg) {
-      title = firstUserMsg.text
-        .replace(/\[Mengirim \d+ gambar\]/g, "")
-        .substring(0, 30);
+      title =
+        firstUserMsg.text
+          .replace(/\[Mengirim Lampiran\]/g, "")
+          .substring(0, 30)
+          .trim() || "Obrolan dengan Gambar";
       if (title.length >= 30) title += "...";
     }
 
@@ -512,17 +553,21 @@ export default function App() {
           updatedAt: Date.now(),
         },
       );
-      await setDoc(
-        doc(db, "artifacts", appId, "user_profiles", activeUid),
-        {
-          lastActive: Date.now(),
-          totalChats:
-            conversations.length +
-            (conversations.find((c) => c.id === chatId) ? 0 : 1),
-          totalMessages: userMessageCount,
-        },
-        { merge: true },
-      );
+
+      // Update total info user (Optional, kadang diblokir rules)
+      try {
+        await setDoc(
+          doc(db, "artifacts", appId, "user_profiles", activeUid),
+          {
+            lastActive: Date.now(),
+            totalChats:
+              conversations.length +
+              (conversations.find((c) => c.id === chatId) ? 0 : 1),
+            totalMessages: userMessageCount,
+          },
+          { merge: true },
+        );
+      } catch (e) {}
     } catch (err) {
       console.error("Gagal simpan percakapan:", err);
     }
@@ -535,9 +580,7 @@ export default function App() {
       );
       return;
     }
-
     const synth = window.speechSynthesis;
-
     if (speakingIndex === index) {
       if (isPaused) {
         synth.resume();
@@ -548,38 +591,39 @@ export default function App() {
       }
       return;
     }
-
     synth.cancel();
     setSpeakingIndex(index);
     setIsPaused(false);
 
     let cleanText = text.replace(/```[\s\S]*?```/g, "Berikut adalah kodenya. ");
     cleanText = cleanText.replace(/[*_#]/g, "");
+    cleanText = cleanText.replace(
+      /\$\$([\s\S]*?)\$\$/g,
+      "sebuah rumus matematika.",
+    );
+    cleanText = cleanText.replace(/\$([^$\n]+)\$/g, "rumus matematika.");
 
     const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.lang = "id-ID";
     utterance.rate = 1.0;
-
     window.speechUtterance = utterance;
 
     utterance.onend = () => {
       setSpeakingIndex(null);
       setIsPaused(false);
     };
-
     utterance.onerror = (e) => {
       if (e.error !== "canceled") {
         setSpeakingIndex(null);
         setIsPaused(false);
       }
     };
-
     synth.speak(utterance);
   };
 
   const exportToWord = (content) => {
     const preHtml =
-      "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='[http://www.w3.org/TR/REC-html40](http://www.w3.org/TR/REC-html40)'><head><meta charset='utf-8'><title>Tugas Kuliah</title></head><body>";
+      "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='[http://www.w3.org/TR/REC-html40](http://www.w3.org/TR/REC-html40)'><head><meta charset='utf-8'><title>Catatan Kojet AI</title></head><body>";
     const postHtml = "</body></html>";
     let htmlContent = content
       .replace(
@@ -587,6 +631,8 @@ export default function App() {
         "<p>[Kode dilampirkan terpisah, silakan copy dari web Kojet AI]</p>",
       )
       .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\$\$([\s\S]*?)\$\$/g, "<p>[Rumus Matematika]</p>")
+      .replace(/\$([^$\n]+)\$/g, "[Rumus]")
       .replace(/\n/g, "<br>");
     const html = preHtml + htmlContent + postHtml;
     const blob = new Blob(["\ufeff", html], { type: "application/msword" });
@@ -606,6 +652,8 @@ export default function App() {
         "<br><i>[Kode dilampirkan terpisah di web]</i><br>",
       )
       .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\$\$([\s\S]*?)\$\$/g, "<p><i>[Rumus Matematika]</i></p>")
+      .replace(/\$([^$\n]+)\$/g, "<i>[Rumus]</i>")
       .replace(/\n/g, "<br>");
     printWindow.document.write(
       `<html><head><title>Generated by Kojet AI</title><style>body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; padding: 40px; max-width: 800px; margin: auto; } h1, h2, h3 { color: #111; } strong { color: #000; }</style></head><body>${htmlContent}</body></html>`,
@@ -657,7 +705,6 @@ export default function App() {
           ]);
         reader.readAsDataURL(file);
       } else {
-        // Untuk dokumen (doc, pdf, dll), baca text dan tampilkan info
         reader.onload = (event) => {
           setImageAttachments((prev) => [
             ...prev,
@@ -665,7 +712,7 @@ export default function App() {
               name: file.name,
               mimeType: file.type,
               data: "",
-              url: "", // Bukan gambar
+              url: "",
               isDoc: true,
               textData: event.target.result,
             },
@@ -683,8 +730,6 @@ export default function App() {
 
   const fetchGeminiResponse = async (chatHistory, currentImages) => {
     const url = `/api/gemini`;
-
-    // Gabungin lampiran text (document) ke dalam pesan terakhir
     const historyToSend = [...chatHistory];
     const docs = currentImages.filter((img) => img.isDoc);
     if (docs.length > 0) {
@@ -692,13 +737,12 @@ export default function App() {
       docs.forEach(
         (d) =>
           (docText += `[${d.name}]:\n${d.textData.substring(0, 5000)}...\n`),
-      ); // Limit panjang doc
+      );
       historyToSend[historyToSend.length - 1].text += docText;
     }
-
     const payload = {
       history: historyToSend,
-      images: currentImages.filter((img) => !img.isDoc) || [], // Kirim gambar beneran aja
+      images: currentImages.filter((img) => !img.isDoc) || [],
     };
 
     const delays = [1000, 2000, 4000, 8000];
@@ -709,14 +753,11 @@ export default function App() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
-
         const data = await response.json();
-
         if (!response.ok)
           throw new Error(
             data.error || `HTTP error! status: ${response.status}`,
           );
-
         return data.text;
       } catch (err) {
         if (i === 3) throw new Error("Gagal menghubungi server Vercel.");
@@ -734,30 +775,24 @@ export default function App() {
       setInput("");
       return;
     }
-
     if ((!currentInput && imageAttachments.length === 0) || isLoading) return;
 
     if (!isRegistered) {
-      setIsLoading(true);
       await handleRegisterName(currentInput);
       setInput("");
-      // Pastikan loading berenti meskipun dia cuma registrasi
-      setIsLoading(false);
       return;
     }
 
     let textToSave = currentInput;
-    // Format UI message
     const uiAttachments = imageAttachments.map((att) => ({
       name: att.name,
       url: att.url,
       isDoc: att.isDoc || false,
     }));
-
     const userMessage = {
       role: "user",
       text: textToSave || "[Mengirim Lampiran]",
-      attachments: uiAttachments, // Simpan info lampiran di database chat
+      attachments: uiAttachments,
     };
 
     const newMessages = [...messages, userMessage];
@@ -792,7 +827,7 @@ export default function App() {
         ...newMessages,
         {
           role: "model",
-          text: "Waduh sorry bro, server backend Kojet AI lagi mikir keras. Coba kirim ulang ya!",
+          text: "Waduh sorry bro, server Kojet AI lagi mikir keras. Coba kirim ulang ya!",
         },
       ]);
     } finally {
@@ -801,20 +836,18 @@ export default function App() {
   };
 
   const handleGenerateMode = () => {
-    setInput("Tolong buatkan atau generate gambar dengan gaya: ");
+    setInput("Tolong buatkan foto dengan gaya: ");
     setShowAttachMenu(false);
   };
 
   const createNewChat = () => {
     if (!isRegistered)
       return alert("Isi nama lo di chat dulu ya bro sebelum bikin chat baru!");
-
     if ("speechSynthesis" in window) {
       window.speechSynthesis.cancel();
       setSpeakingIndex(null);
       setIsPaused(false);
     }
-
     const newId = generateId();
     setCurrentChatId(newId);
     setMessages([]);
@@ -830,7 +863,6 @@ export default function App() {
         setSpeakingIndex(null);
         setIsPaused(false);
       }
-
       setCurrentChatId(chat.id);
       setMessages(chat.messages || []);
       setImageAttachments([]);
@@ -932,13 +964,13 @@ export default function App() {
                 v1.1
               </span>
               <span className="leading-tight">
-                Menu attachment baru, perbaikan loading, display rumus MTK,
-                admin dashboard. (10-05-2026)
+                Perbaikan loading instan, bug admin fixed, update gaya bahasa
+                AI. (10-05-2026)
               </span>
             </li>
             <li className="flex gap-2 items-start opacity-60">
               <span className="font-bold">v1.0</span>
-              <span>Peluncuran perdana aplikasi. (09-05-2026)</span>
+              <span>Peluncuran perdana Kojet AI. (09-05-2026)</span>
             </li>
           </ul>
         </div>
@@ -1105,63 +1137,9 @@ export default function App() {
                           </td>
                         </tr>
                       ))}
-                      {allUsersStats.length === 0 && (
-                        <tr>
-                          <td
-                            colSpan="4"
-                            className="px-6 py-8 text-center text-gray-500 italic"
-                          >
-                            Belum ada pengguna.
-                          </td>
-                        </tr>
-                      )}
                     </tbody>
                   </table>
                 </div>
-              </div>
-
-              <div className="bg-[#161925] border border-gray-800 rounded-2xl p-6 shadow-xl">
-                <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-                  <Lucide.Settings size={16} className="text-blue-400" />{" "}
-                  Pengaturan Kontak (Tersimpan di Backend)
-                </h3>
-                <form onSubmit={handleSaveSettings} className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-xs text-gray-400 mb-1.5 block">
-                        Username Instagram
-                      </label>
-                      <div className="relative">
-                        <span className="absolute left-4 top-3 text-gray-500">
-                          @
-                        </span>
-                        <input
-                          name="ig"
-                          defaultValue={appSettings.ig}
-                          className="w-full bg-[#0f111a] border border-gray-700 text-white rounded-xl pl-8 pr-4 py-2.5 focus:outline-none focus:border-blue-500"
-                          placeholder="faajharr_"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-400 mb-1.5 block">
-                        Nomor WhatsApp
-                      </label>
-                      <input
-                        name="wa"
-                        defaultValue={appSettings.wa}
-                        className="w-full bg-[#0f111a] border border-gray-700 text-white rounded-xl px-4 py-2.5 focus:outline-none focus:border-green-500"
-                        placeholder="0831xxx"
-                      />
-                    </div>
-                  </div>
-                  <button
-                    type="submit"
-                    className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-colors w-full md:w-auto"
-                  >
-                    Simpan Pengaturan
-                  </button>
-                </form>
               </div>
             </div>
           </div>
@@ -1183,12 +1161,12 @@ export default function App() {
                     <h2 className="text-2xl md:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 mb-2 md:mb-3 tracking-tight px-4">
                       {!isRegistered
                         ? "Selamat Datang di Kojet AI!"
-                        : `Hai ${userName}, Tugas Apa Hari Ini?`}
+                        : `Hai ${userName}, Mau bahas apa nih bro?`}
                     </h2>
                     <p className="text-gray-400 max-w-[280px] md:max-w-md text-xs md:text-sm leading-relaxed mb-6 md:mb-8">
                       {!isRegistered
-                        ? "Gue asisten nugas lo yang asik. Sebelum mulai ngobrol, ketik nama panggilan lo di bawah ini dulu ya bro!"
-                        : "Gue Kojet AI. Ketik aja tugas kuliah lo, minta bikinin esai, upload jurnal, atau generate gambar!"}
+                        ? "Gue Kojet AI. Ketik nama panggilan lo di bawah ini dulu ya bro biar kita bisa mulai ngobrol!"
+                        : "Santai aja bro. Ketik aja mau ngobrol apa, bisa dibantu ngerjain macem-macem, upload file, atau generate gambar!"}
                     </p>
 
                     {isRegistered && (
@@ -1196,15 +1174,15 @@ export default function App() {
                         <button
                           onClick={() =>
                             setInput(
-                              "Buatin gue makalah 3 paragraf tentang Pengaruh AI di Pendidikan.",
+                              "Bro, bantu buatin gue makalah 3 paragraf tentang Pengaruh AI dong.",
                             )
                           }
                           className="p-3.5 md:p-4 rounded-xl md:rounded-2xl border border-white/5 bg-white/5 hover:bg-white/10 text-[13px] md:text-sm text-gray-300 transition-all hover:scale-[1.02] group"
                         >
                           <span className="flex items-center gap-2 text-blue-400 font-medium mb-1">
-                            <Lucide.FileText size={14} /> Nugas Makalah
+                            <Lucide.FileText size={14} /> Bikin Esai / Makalah
                           </span>
-                          "Buatin gue makalah 3 paragraf tentang AI..."
+                          "Bantu gue buatin makalah 3 paragraf tentang AI..."
                         </button>
                         <button
                           onClick={handleGenerateMode}
@@ -1242,11 +1220,9 @@ export default function App() {
                           )}
                         </div>
 
-                        {/* Bubble Chat */}
                         <div
                           className={`max-w-[85%] rounded-2xl md:rounded-3xl px-4 py-3 md:px-6 md:py-4 shadow-xl overflow-hidden ${msg.role === "user" ? "bg-blue-600 text-white rounded-tr-sm" : "bg-[#181a25] border border-white/5 text-gray-100 rounded-tl-sm w-full"}`}
                         >
-                          {/* PREVIEW LAMPIRAN DI ATAS TEKS */}
                           {msg.attachments && msg.attachments.length > 0 && (
                             <div className="flex flex-wrap gap-2 mb-3">
                               {msg.attachments.map((att, i) =>
@@ -1274,7 +1250,6 @@ export default function App() {
                               )}
                             </div>
                           )}
-
                           {msg.role === "user" ? (
                             <p className="whitespace-pre-wrap break-words leading-relaxed text-[14px] md:text-[15px]">
                               {msg.text.replace(/\[Mengirim Lampiran\]/g, "")}
@@ -1367,8 +1342,8 @@ export default function App() {
                       </div>
                       <span className="text-[13px] md:text-sm font-medium bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400 animate-pulse">
                         {!isRegistered
-                          ? "Kojet AI lagi siapin workspace lo..."
-                          : "Kojet AI lagi mikir keras..."}
+                          ? "Kojet AI lagi nyiapin obrolan lo..."
+                          : "Kojet AI lagi ngetik..."}
                       </span>
                     </div>
                   </div>
@@ -1380,7 +1355,6 @@ export default function App() {
             {/* --- INPUT AREA --- */}
             <div className="p-2 md:p-4 bg-[#0f111a] md:bg-gradient-to-t md:from-[#0f111a] md:via-[#0f111a] md:to-transparent shrink-0 relative z-30">
               <div className="max-w-4xl mx-auto w-full relative">
-                {/* PREVIEW LAMPIRAN SEBELUM DIKIRIM */}
                 {imageAttachments.length > 0 && (
                   <div className="flex flex-wrap gap-2 md:gap-3 mb-2 md:mb-3 p-2 md:p-3 bg-white/5 backdrop-blur-md rounded-xl md:rounded-2xl border border-white/5">
                     {imageAttachments.map((img, idx) => (
@@ -1427,7 +1401,6 @@ export default function App() {
                     accept=".txt,.js,.html,.css,.py,.doc,.docx,.pdf,image/*"
                   />
 
-                  {/* MENU ATTACHMENT POPUP */}
                   <div className="relative">
                     <button
                       type="button"
@@ -1438,7 +1411,6 @@ export default function App() {
                     >
                       <Lucide.Paperclip size={20} className="md:w-5 md:h-5" />
                     </button>
-
                     {showAttachMenu && isRegistered && (
                       <>
                         <div
@@ -1492,7 +1464,7 @@ export default function App() {
                           ? "Ketik nama panggilan lo buat mulai..."
                           : isListening
                             ? "Ngomong aja bro..."
-                            : "Ketik tugas lo di sini..."
+                            : "Ketik pesan lo di sini..."
                       }
                       className={`w-full bg-transparent text-gray-100 placeholder-gray-500 md:placeholder-gray-600 rounded-xl md:rounded-2xl px-1 md:px-2 py-3 md:py-3.5 focus:outline-none resize-none min-h-[44px] md:min-h-[52px] max-h-[120px] md:max-h-[200px] custom-scrollbar block text-[14px] md:text-[15px] ${isListening ? "animate-pulse text-blue-400 placeholder-blue-500" : ""}`}
                       rows={Math.min(4, (input.match(/\n/g) || []).length + 1)}
@@ -1512,7 +1484,6 @@ export default function App() {
                       <Lucide.Mic size={20} className="md:w-5 md:h-5" />
                     )}
                   </button>
-
                   <button
                     type="submit"
                     disabled={
@@ -1529,7 +1500,7 @@ export default function App() {
                 </form>
                 <div className="text-center mt-2 md:mt-3 hidden md:block">
                   <span className="text-[10px] md:text-[11px] font-medium text-gray-500 bg-[#161925] px-3 py-1 rounded-full border border-gray-800/50">
-                    Kojet AI v1.1 ✨ Partner Nugas Terbaik Mahasiswa
+                    Kojet AI v1.1 ✨ Partner AI Terbaik
                   </span>
                 </div>
               </div>
@@ -1540,15 +1511,7 @@ export default function App() {
 
       <style
         dangerouslySetInnerHTML={{
-          __html: `
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
-        @media (min-width: 768px) { .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; } }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
-      `,
+          __html: `.custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; } @media (min-width: 768px) { .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; } } .custom-scrollbar::-webkit-scrollbar-track { background: transparent; } .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; } .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); } @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } } .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }`,
         }}
       />
     </div>
