@@ -1,28 +1,55 @@
 // api/gemini.js
-// File ini berjalan di SERVER Vercel, bukan di browser pengguna.
+// File ini berjalan di SERVER Vercel menggunakan Edge Runtime
 
-export default async function handler(req, res) {
-  // Hanya menerima metode POST dari frontend React
+export const config = {
+  runtime: "edge", // Mantra ajaib biar gak kena limit 10 detik Vercel
+};
+
+export default async function handler(req) {
+  // Mengatur CORS agar request dari browser diizinkan
+  const corsHeaders = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "OPTIONS, POST",
+    "Access-Control-Allow-Headers": "Content-Type",
+  };
+
+  // Handle preflight request (PENTING untuk CORS)
+  if (req.method === "OPTIONS") {
+    return new Response("OK", { headers: corsHeaders });
+  }
+
+  // Hanya menerima metode POST
   if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+    return new Response(JSON.stringify({ error: "Gunakan method POST bro" }), {
+      status: 405,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   try {
-    const { history, images } = req.body;
+    // Membaca body request (Cara Edge Runtime)
+    const body = await req.json();
+    const { history, images } = body;
 
-    // API Key lo yang sudah dibuka gemboknya (akhiran YE8c)
-    process.env.GOOGLE_AI_KEY;
+    // --- PERBAIKAN DI SINI ---
+    // Mengambil kunci rahasia dari brankas Vercel ke dalam variabel apiKey
+    const apiKey = process.env.GOOGLE_AI_KEY;
 
+    // Mengecek apakah apiKey ada (Kode yang lo tanyakan tadi)
     if (!apiKey) {
-      return new Response(JSON.stringify({ error: 'API Key Vercel belum dipasang' }), { 
-        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
+      return new Response(
+        JSON.stringify({ error: "API Key Vercel belum dipasang" }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
-    // Menggunakan model Gemini 3.1 Flash Lite sesuai request lo!
+    // Menggunakan model Gemini 3.1 Flash Lite sesuai request lo
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${apiKey}`;
 
+    // Format chat history
     const formattedMessages = history.map((m) => ({
       role: m.role,
       parts: [{ text: m.text }],
@@ -38,8 +65,8 @@ export default async function handler(req, res) {
       });
     }
 
-    // Perintah dasar AI Kojet
-    const systemPromptText = `Kamu adalah Kojet AI, asisten AI super asik bangt. Diciptakan oleh fajar. jika di tanya siapa kojet ai dan siapa pembuatmu kamu jawab kojet ai adalah ai yang dibuat oleh fajar atau ignya @faajharr_ atau suruh klik logo kamera untuk instagram dan logo telepon untuk wa.  Jawab pertanyaan dengan santai, akurat, dan informatif tapi tetap asik. kamu juga bisa bantu mengerjakan tugas mereka.jangan terlalu sering mengenalkan fajar takutnya user jadi ilfil kenalkan pas situasi tertentu saja. fajar adalah mahasiswa teknik elektro universitas tanjungpura yang berada di pontianak. fajar berasal dari sambas. nama kojet di ambil dari nama panggilannya. projek fajar ada di github dengan nama user faajharr`;
+    // Perintah dasar (Sifat) AI Kojet sesuai settingan lo
+    const systemPromptText = `Kamu adalah Kojet AI, asisten AI super asik bangt. Diciptakan oleh fajar. jika di tanya siapa kojet ai dan siapa pembuatmu kamu jawab kojet ai adalah ai yang dibuat oleh fajar atau ignya @faajharr_ atau suruh klik logo kamera untuk instagram dan logo telepon untuk wa. Jawab pertanyaan dengan santai, akurat, dan informatif tapi tetap asik. kamu juga bisa bantu mengerjakan tugas mereka.jangan terlalu sering mengenalkan fajar takutnya user jadi ilfil kenalkan pas situasi tertentu saja. fajar adalah mahasiswa teknik elektro universitas tanjungpura yang berada di pontianak. fajar berasal dari sambas. nama kojet di ambil dari nama panggilannya. projek fajar ada di github dengan nama user faajharr`;
 
     const payload = {
       contents: formattedMessages,
@@ -50,7 +77,7 @@ export default async function handler(req, res) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        // Tambahan header untuk memastikan Google menerima request dari Vercel
+        // Header khusus agar API Google tahu ini dari Vercel
         "x-goog-api-client": "gl-node/18.x",
         "User-Agent": "Vercel-Serverless-Function",
       },
@@ -59,24 +86,38 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    // Jika masih ditolak Google (meskipun gembok sudah dibuka)
+    // Menangkap error dari Google (misal: 403 Forbidden / API Key terblokir)
     if (!response.ok) {
       console.error("Google API Error:", data);
-      return res
-        .status(response.status)
-        .json({
+      return new Response(
+        JSON.stringify({
           error:
             data.error?.message ||
             `Google API responded with ${response.status}`,
-        });
+        }),
+        {
+          status: response.status,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
-    // Mengembalikan jawaban sukses ke Kojet AI
-    return res
-      .status(200)
-      .json({ text: data.candidates[0].content.parts[0].text });
+    // Mengembalikan jawaban sukses ke frontend
+    return new Response(
+      JSON.stringify({ text: data.candidates[0].content.parts[0].text }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   } catch (error) {
     console.error("Server Error:", error);
-    return res.status(500).json({ error: "Gagal menghubungi AI Server" });
+    return new Response(
+      JSON.stringify({ error: "Gagal menghubungi AI Server" }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
 }
