@@ -213,6 +213,7 @@ export default function App() {
   const [speakingIndex, setSpeakingIndex] = useState(null);
   const [isPaused, setIsPaused] = useState(false);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const [showUpdateInfo, setShowUpdateInfo] = useState(false);
 
   const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
@@ -584,14 +585,12 @@ export default function App() {
     recognition.start();
   };
 
-  // --- KODE BARU: PEMBACA FILE DOCX MENGGUNAKAN MAMMOTH.JS ---
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
     files.forEach((file) => {
       const reader = new FileReader();
 
-      // 1. Gambar
       if (file.type.startsWith("image/")) {
         reader.onload = (event) =>
           setImageAttachments((prev) => [
@@ -604,9 +603,7 @@ export default function App() {
             },
           ]);
         reader.readAsDataURL(file);
-      }
-      // 2. PDF Asli (Bisa dikirim langsung ke Gemini via Base64)
-      else if (file.type === "application/pdf") {
+      } else if (file.type === "application/pdf") {
         reader.onload = (event) =>
           setImageAttachments((prev) => [
             ...prev,
@@ -619,9 +616,7 @@ export default function App() {
             },
           ]);
         reader.readAsDataURL(file);
-      }
-      // 3. File Word (.docx) - Dibongkar Otomatis pakai Mammoth
-      else if (file.name.match(/\.docx$/i)) {
+      } else if (file.name.match(/\.docx$/i)) {
         reader.onload = async (event) => {
           if (!window.mammoth) {
             alert(
@@ -631,7 +626,6 @@ export default function App() {
           }
           try {
             const arrayBuffer = event.target.result;
-            // Mengubah ZIP/XML docx menjadi teks murni yang bisa dibaca AI
             const result = await window.mammoth.extractRawText({ arrayBuffer });
             setImageAttachments((prev) => [
               ...prev,
@@ -651,11 +645,8 @@ export default function App() {
             );
           }
         };
-        // Penting: docx wajib dibaca sebagai ArrayBuffer
         reader.readAsArrayBuffer(file);
-      }
-      // 4. Teks Murni (.txt, .js, .py, .html, dll)
-      else if (
+      } else if (
         file.type.startsWith("text/") ||
         file.name.match(/\.(txt|js|py|html|css|json|md|csv)$/i)
       ) {
@@ -673,9 +664,7 @@ export default function App() {
           ]);
         };
         reader.readAsText(file);
-      }
-      // 5. File lain-lain (Excel, PPT, dll)
-      else {
+      } else {
         alert(
           `Bro, format file ${file.name} belum bisa dibaca. Tolong convert ke PDF atau copy-paste aja isinya!`,
         );
@@ -692,7 +681,6 @@ export default function App() {
     const url = `/api/gemini`;
     const historyToSend = [...chatHistory];
 
-    // Gabungin file berformat Teks Mentah ke dalam prompt
     const textDocs = currentImages.filter((img) => img.isDoc && img.textData);
     if (textDocs.length > 0) {
       let docText = "\n\n--- Referensi Dokumen Teks ---\n";
@@ -703,7 +691,6 @@ export default function App() {
       historyToSend[historyToSend.length - 1].text += docText;
     }
 
-    // Kirim gambar dan PDF via Data Base64 (Format yang didukung API)
     const payload = {
       history: historyToSend,
       images: currentImages.filter((img) => img.data && !img.textData) || [],
@@ -918,28 +905,40 @@ export default function App() {
           )}
         </div>
 
-        {/* INFO UPDATE SIDEBAR */}
+        {/* INFO UPDATE SIDEBAR (KINI BISA DI-KLIK/DIBUKA-TUTUP) */}
         <div className="px-4 py-3 border-t border-gray-800/60 bg-[#12141c]">
-          <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-            <Lucide.Info size={12} /> Info Update
-          </h4>
-          <ul className="text-[11px] space-y-2 text-gray-400">
-            <li className="flex gap-2 items-start">
-              <span className="text-blue-400 font-bold bg-blue-500/10 px-1 rounded">
-                v1.1.2
-              </span>
-              <span className="leading-tight">
-                Dukungan baca file Word (DOCX) otomatis tanpa alien code.
-                (10-05-2026)
-              </span>
-            </li>
-            <li className="flex gap-2 items-start opacity-60">
-              <span className="font-bold">v1.1.1</span>
-              <span>
-                Perbaikan bug loading instan & fix riwayat sidebar. (10-05-2026)
-              </span>
-            </li>
-          </ul>
+          <button
+            onClick={() => setShowUpdateInfo(!showUpdateInfo)}
+            className="w-full text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center justify-between hover:text-gray-300 transition-colors"
+          >
+            <span className="flex items-center gap-1.5">
+              <Lucide.Info size={12} /> Info Update
+            </span>
+            {showUpdateInfo ? (
+              <Lucide.ChevronDown size={14} />
+            ) : (
+              <Lucide.ChevronRight size={14} />
+            )}
+          </button>
+
+          {showUpdateInfo && (
+            <ul className="text-[11px] space-y-2 text-gray-400 mt-3 animate-fade-in">
+              <li className="flex gap-2 items-start">
+                <span className="text-blue-400 font-bold bg-blue-500/10 px-1 rounded shrink-0">
+                  v1.2
+                </span>
+                <span className="leading-tight">
+                  Menu attachment, unggah foto, baca dokumen asli Word & PDF,
+                  fitur perbaikan loading, dan render rumus matematika.
+                  (10-05-2026)
+                </span>
+              </li>
+              <li className="flex gap-2 items-start opacity-60">
+                <span className="font-bold shrink-0">v1.0</span>
+                <span>Peluncuran perdana aplikasi Kojet AI. (09-05-2026)</span>
+              </li>
+            </ul>
+          )}
         </div>
 
         <div className="p-4 border-t border-gray-800/60 bg-[#161925]">
@@ -1467,7 +1466,7 @@ export default function App() {
                 </form>
                 <div className="text-center mt-2 md:mt-3 hidden md:block">
                   <span className="text-[10px] md:text-[11px] font-medium text-gray-500 bg-[#161925] px-3 py-1 rounded-full border border-gray-800/50">
-                    Kojet AI v1.1.2 ✨ Partner Chat Cerdas Mahasiswa
+                    Kojet AI v1.2 ✨ Partner AI Karya Urang Sambas
                   </span>
                 </div>
               </div>
