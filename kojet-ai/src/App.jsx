@@ -780,7 +780,7 @@ export default function App() {
         ...newMessages,
         {
           role: "model",
-          text: "Waduh sorry bro, server Kojet AI lagi mikir keras. Coba kirim ulang ya!",
+          text: "Waduh sorry bro, server Kojet AI lagi adamasalah. Coba lagi beberapa saat, atau hubungi fajar nya lansung untuk memperbaili masalahnya. Untuk menghubunginya silahkan klik logo telepon di kanan atas",
         },
       ]);
     } finally {
