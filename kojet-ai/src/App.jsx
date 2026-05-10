@@ -126,10 +126,12 @@ const CodeBlock = ({ code, lang }) => {
   );
 };
 
-// --- Format Pesan ---
+// --- Format Pesan (Diperbaiki untuk Rumus Matematika) ---
 const MessageFormatter = ({ text }) => {
   const blocks = text.split(/(```[\w]*\n[\s\S]*?```)/g);
   const formatText = (content) => {
+    // Menghapus regex \n -> <br> agar rumus matematika dan markdown tidak rusak
+    // Kita gunakan whitespace-pre-wrap di parent class agar format aslinya terjaga
     let formatted = content
       .replace(
         /\*\*(.*?)\*\*/g,
@@ -137,14 +139,13 @@ const MessageFormatter = ({ text }) => {
       )
       .replace(
         /`([^`\n]+)`/g,
-        '<code class="bg-gray-800 text-pink-300 px-1.5 py-0.5 rounded-md text-[0.9em] font-mono border border-gray-700/50 break-words">$1</code>',
-      )
-      .replace(/\n/g, "<br>");
+        '<code class="bg-gray-800 text-blue-300 px-1.5 py-0.5 rounded-md text-[0.9em] font-mono border border-gray-700/50 break-words">$1</code>',
+      );
     return { __html: formatted };
   };
 
   return (
-    <div className="space-y-4 text-[14px] sm:text-[15px] md:text-base leading-relaxed text-gray-300 break-words w-full">
+    <div className="space-y-4 text-[14px] sm:text-[15px] md:text-base leading-relaxed text-gray-300 break-words w-full whitespace-pre-wrap">
       {blocks.map((block, index) => {
         if (block.startsWith("```")) {
           const match = block.match(/```([\w]*)\n([\s\S]*?)```/);
@@ -203,6 +204,7 @@ export default function App() {
   const [allUsersStats, setAllUsersStats] = useState([]);
   const [speakingIndex, setSpeakingIndex] = useState(null);
   const [isPaused, setIsPaused] = useState(false);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
 
   const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
@@ -274,6 +276,7 @@ export default function App() {
     return () => unsubProfile();
   }, [user, activeUid]);
 
+  // Listener Riwayat Chat (Otomatis Handle Fetch Data Lama)
   useEffect(() => {
     if (!activeUid) return;
 
@@ -292,7 +295,8 @@ export default function App() {
       setConversations(data);
 
       const currentConv = data.find((c) => c.id === currentChatId);
-      if (currentConv && currentConv.messages.length > 0 && !isLoading) {
+      // Hanya set messages jika tidak sedang loading (menghindari overwrite)
+      if (currentConv && currentConv.messages && !isLoading) {
         setMessages(currentConv.messages);
       }
     });
@@ -310,6 +314,7 @@ export default function App() {
     return () => unsubSettings();
   }, []);
 
+  // Listener Admin Dashboard (Fix hitung User)
   useEffect(() => {
     if (viewMode !== "admin_dashboard") return;
     const allUsersRef = collection(db, "artifacts", appId, "user_profiles");
@@ -351,6 +356,13 @@ export default function App() {
           { merge: true },
         );
 
+        // Atur state user DULU sebelum chat di load
+        setActiveUid(targetUid);
+        setUserName(existingProfile.name);
+        setIsRegistered(true);
+        localStorage.setItem("kojet_active_uid", targetUid);
+        localStorage.setItem("kojet_user_name", existingProfile.name);
+
         const convRef = collection(
           db,
           "artifacts",
@@ -367,12 +379,12 @@ export default function App() {
           allConvs.sort((a, b) => b.updatedAt - a.updatedAt);
           const latestChat = allConvs[0];
           setCurrentChatId(latestChat.id);
-          setMessages(latestChat.messages || []);
+          // UI otomatis akan di-handle oleh useEffect listener riwayat
         } else {
           setMessages([
             {
               role: "model",
-              text: `Welcome back, ${existingProfile.name}! Mau dibantu nugas apa hari ini?`,
+              text: `Welcome back, ${existingProfile.name}! Kojet siap bantu nugas lagi nih.`,
             },
           ]);
         }
@@ -385,28 +397,24 @@ export default function App() {
           totalChats: 0,
           totalMessages: 0,
         });
+        setActiveUid(targetUid);
+        setUserName(nameInput);
+        setIsRegistered(true);
+        localStorage.setItem("kojet_active_uid", targetUid);
+        localStorage.setItem("kojet_user_name", nameInput);
+
         setMessages([
           {
             role: "model",
-            text: `Salam kenal, ${nameInput}! Gue Kojet AI. apa kabar hari ini! ada yang bisa saya bant?`,
+            text: `Salam kenal, ${nameInput}! Gue Kojet AI. Gaya gue asik dan siap bantu semua tugas lo bro! Gas kita mulai?`,
           },
         ]);
       }
-
-      setActiveUid(targetUid);
-      setUserName(existingProfile ? existingProfile.name : nameInput);
-      setIsRegistered(true);
-
-      localStorage.setItem("kojet_active_uid", targetUid);
-      localStorage.setItem(
-        "kojet_user_name",
-        existingProfile ? existingProfile.name : nameInput,
-      );
     } catch (error) {
       console.error("Gagal login/register:", error);
       alert("Gagal terhubung ke database. Pastikan koneksi internet aktif.");
     } finally {
-      setIsLoading(false);
+      setIsLoading(false); // Fix loading nyangkut
     }
   };
 
@@ -649,16 +657,25 @@ export default function App() {
           ]);
         reader.readAsDataURL(file);
       } else {
-        reader.onload = (event) =>
-          setInput(
-            (prev) =>
-              prev +
-              `\n\n// --- File referensi: ${file.name} ---\n\`\`\`${file.name.split(".").pop()}\n${event.target.result}\n\`\`\`\n`,
-          );
+        // Untuk dokumen (doc, pdf, dll), baca text dan tampilkan info
+        reader.onload = (event) => {
+          setImageAttachments((prev) => [
+            ...prev,
+            {
+              name: file.name,
+              mimeType: file.type,
+              data: "",
+              url: "", // Bukan gambar
+              isDoc: true,
+              textData: event.target.result,
+            },
+          ]);
+        };
         reader.readAsText(file);
       }
     });
     if (fileInputRef.current) fileInputRef.current.value = "";
+    setShowAttachMenu(false);
   };
 
   const removeAttachment = (index) =>
@@ -666,9 +683,22 @@ export default function App() {
 
   const fetchGeminiResponse = async (chatHistory, currentImages) => {
     const url = `/api/gemini`;
+
+    // Gabungin lampiran text (document) ke dalam pesan terakhir
+    const historyToSend = [...chatHistory];
+    const docs = currentImages.filter((img) => img.isDoc);
+    if (docs.length > 0) {
+      let docText = "\n\n--- Referensi Dokumen ---\n";
+      docs.forEach(
+        (d) =>
+          (docText += `[${d.name}]:\n${d.textData.substring(0, 5000)}...\n`),
+      ); // Limit panjang doc
+      historyToSend[historyToSend.length - 1].text += docText;
+    }
+
     const payload = {
-      history: chatHistory,
-      images: currentImages || [],
+      history: historyToSend,
+      images: currentImages.filter((img) => !img.isDoc) || [], // Kirim gambar beneran aja
     };
 
     const delays = [1000, 2000, 4000, 8000];
@@ -711,16 +741,25 @@ export default function App() {
       setIsLoading(true);
       await handleRegisterName(currentInput);
       setInput("");
+      // Pastikan loading berenti meskipun dia cuma registrasi
+      setIsLoading(false);
       return;
     }
 
     let textToSave = currentInput;
-    if (imageAttachments.length > 0) textToSave += `\n\n[Mengirim lampiran]`;
+    // Format UI message
+    const uiAttachments = imageAttachments.map((att) => ({
+      name: att.name,
+      url: att.url,
+      isDoc: att.isDoc || false,
+    }));
 
     const userMessage = {
       role: "user",
-      text: textToSave || "[Lampiran gambar]",
+      text: textToSave || "[Mengirim Lampiran]",
+      attachments: uiAttachments, // Simpan info lampiran di database chat
     };
+
     const newMessages = [...messages, userMessage];
     const imagesToSend = [...imageAttachments];
 
@@ -753,12 +792,17 @@ export default function App() {
         ...newMessages,
         {
           role: "model",
-          text: "Waduh sorry bro, server backend Kojet AI lagi error dikit. Coba kirim ulang ya!",
+          text: "Waduh sorry bro, server backend Kojet AI lagi mikir keras. Coba kirim ulang ya!",
         },
       ]);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleGenerateMode = () => {
+    setInput("Tolong buatkan atau generate gambar dengan gaya: ");
+    setShowAttachMenu(false);
   };
 
   const createNewChat = () => {
@@ -807,7 +851,7 @@ export default function App() {
       <aside
         className={`fixed md:static inset-y-0 left-0 z-50 w-[280px] bg-[#161925] border-r border-gray-800/60 transform transition-transform duration-300 ease-in-out flex flex-col shadow-2xl md:shadow-none ${isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
       >
-        <div className="p-4 md:p-5 flex items-center justify-between">
+        <div className="p-4 md:p-5 flex items-center justify-between border-b border-gray-800/50">
           <div className="flex items-center gap-3">
             <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-2 rounded-xl shadow-lg shadow-blue-500/20">
               <Lucide.TerminalSquare size={20} className="text-white" />
@@ -827,7 +871,7 @@ export default function App() {
           </button>
         </div>
 
-        <div className="px-4 pb-4">
+        <div className="px-4 py-4">
           <button
             onClick={() => {
               createNewChat();
@@ -875,6 +919,28 @@ export default function App() {
               ))}
             </div>
           )}
+        </div>
+
+        {/* INFO UPDATE SIDEBAR */}
+        <div className="px-4 py-3 border-t border-gray-800/60 bg-[#12141c]">
+          <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+            <Lucide.Info size={12} /> Info Update
+          </h4>
+          <ul className="text-[11px] space-y-2 text-gray-400">
+            <li className="flex gap-2 items-start">
+              <span className="text-blue-400 font-bold bg-blue-500/10 px-1 rounded">
+                v1.1
+              </span>
+              <span className="leading-tight">
+                Menu attachment baru, perbaikan loading, display rumus MTK,
+                admin dashboard. (10-05-2026)
+              </span>
+            </li>
+            <li className="flex gap-2 items-start opacity-60">
+              <span className="font-bold">v1.0</span>
+              <span>Peluncuran perdana aplikasi. (09-05-2026)</span>
+            </li>
+          </ul>
         </div>
 
         <div className="p-4 border-t border-gray-800/60 bg-[#161925]">
@@ -960,6 +1026,7 @@ export default function App() {
           </div>
         </header>
 
+        {/* --- ADMIN DASHBOARD --- */}
         {viewMode === "admin_dashboard" && (
           <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar relative z-10">
             <div className="max-w-5xl mx-auto space-y-6">
@@ -1100,6 +1167,7 @@ export default function App() {
           </div>
         )}
 
+        {/* --- CHAT AREA --- */}
         {viewMode === "chat" && (
           <>
             <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 md:p-6 custom-scrollbar relative z-0 w-full">
@@ -1115,39 +1183,37 @@ export default function App() {
                     <h2 className="text-2xl md:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 mb-2 md:mb-3 tracking-tight px-4">
                       {!isRegistered
                         ? "Selamat Datang di Kojet AI!"
-                        : `Hai ${userName}, Ada Yang Bisa Saya Bantu?`}
+                        : `Hai ${userName}, Tugas Apa Hari Ini?`}
                     </h2>
                     <p className="text-gray-400 max-w-[280px] md:max-w-md text-xs md:text-sm leading-relaxed mb-6 md:mb-8">
                       {!isRegistered
-                        ? "Gue asisten nugas lo. Sebelum mulai ngobrol, ketik nama panggilan lo di bawah ini dulu ya!"
-                        : "Gue Kojet AI. Ketik aja tugas lo, atau ngobrol apa saja"}
+                        ? "Gue asisten nugas lo yang asik. Sebelum mulai ngobrol, ketik nama panggilan lo di bawah ini dulu ya bro!"
+                        : "Gue Kojet AI. Ketik aja tugas kuliah lo, minta bikinin esai, upload jurnal, atau generate gambar!"}
                     </p>
 
                     {isRegistered && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 w-full max-w-2xl text-left px-2">
                         <button
                           onClick={() =>
-                            setInput("Siapa Kojet AI dan siapa pembuatmu?")
-                          }
-                          className="p-3.5 md:p-4 rounded-xl md:rounded-2xl border border-white/5 bg-white/5 hover:bg-white/10 text-[13px] md:text-sm text-gray-300 transition-all hover:scale-[1.02] group"
-                        >
-                          <span className="flex items-center gap-2 text-blue-400 font-medium mb-1">
-                            <Lucide.Sparkles size={14} /> Kenalan
-                          </span>
-                          "Siapa Kojet AI dan siapa kreator lo?"
-                        </button>
-                        <button
-                          onClick={() =>
                             setInput(
-                              "Buatkan makalah 3 paragraf tentang Pengaruh AI di Bidang Pendidikan dan siapkan format Word/PDF nya",
+                              "Buatin gue makalah 3 paragraf tentang Pengaruh AI di Pendidikan.",
                             )
                           }
                           className="p-3.5 md:p-4 rounded-xl md:rounded-2xl border border-white/5 bg-white/5 hover:bg-white/10 text-[13px] md:text-sm text-gray-300 transition-all hover:scale-[1.02] group"
                         >
-                          <span className="flex items-center gap-2 text-purple-400 font-medium mb-1">
+                          <span className="flex items-center gap-2 text-blue-400 font-medium mb-1">
                             <Lucide.FileText size={14} /> Nugas Makalah
                           </span>
-                          "Buatin esai tentang AI dan kasih tombol Word-nya"
+                          "Buatin gue makalah 3 paragraf tentang AI..."
+                        </button>
+                        <button
+                          onClick={handleGenerateMode}
+                          className="p-3.5 md:p-4 rounded-xl md:rounded-2xl border border-white/5 bg-white/5 hover:bg-white/10 text-[13px] md:text-sm text-gray-300 transition-all hover:scale-[1.02] group"
+                        >
+                          <span className="flex items-center gap-2 text-purple-400 font-medium mb-1">
+                            <Lucide.ImagePlus size={14} /> Generate Foto
+                          </span>
+                          "Tolong buatkan foto dengan gaya..."
                         </button>
                       </div>
                     )}
@@ -1175,18 +1241,50 @@ export default function App() {
                             />
                           )}
                         </div>
+
+                        {/* Bubble Chat */}
                         <div
                           className={`max-w-[85%] rounded-2xl md:rounded-3xl px-4 py-3 md:px-6 md:py-4 shadow-xl overflow-hidden ${msg.role === "user" ? "bg-blue-600 text-white rounded-tr-sm" : "bg-[#181a25] border border-white/5 text-gray-100 rounded-tl-sm w-full"}`}
                         >
+                          {/* PREVIEW LAMPIRAN DI ATAS TEKS */}
+                          {msg.attachments && msg.attachments.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mb-3">
+                              {msg.attachments.map((att, i) =>
+                                !att.isDoc ? (
+                                  <img
+                                    key={i}
+                                    src={att.url}
+                                    alt="Uploaded"
+                                    className="w-20 h-20 md:w-24 md:h-24 object-cover rounded-xl border border-white/20 shadow-md"
+                                  />
+                                ) : (
+                                  <div
+                                    key={i}
+                                    className="flex items-center gap-2 bg-white/10 px-3 py-2 rounded-lg text-xs md:text-sm shadow-md border border-white/10"
+                                  >
+                                    <Lucide.FileText
+                                      size={16}
+                                      className="text-blue-300"
+                                    />
+                                    <span className="truncate max-w-[150px] font-medium">
+                                      {att.name}
+                                    </span>
+                                  </div>
+                                ),
+                              )}
+                            </div>
+                          )}
+
                           {msg.role === "user" ? (
                             <p className="whitespace-pre-wrap break-words leading-relaxed text-[14px] md:text-[15px]">
-                              {msg.text}
+                              {msg.text.replace(/\[Mengirim Lampiran\]/g, "")}
                             </p>
                           ) : (
                             <MessageFormatter text={msg.text} />
                           )}
                         </div>
                       </div>
+
                       {msg.role === "model" && (
                         <div className="flex flex-wrap gap-2 ml-11 md:ml-16 mt-1 mb-2">
                           <button
@@ -1269,8 +1367,8 @@ export default function App() {
                       </div>
                       <span className="text-[13px] md:text-sm font-medium bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400 animate-pulse">
                         {!isRegistered
-                          ? "Kojet AI lagi siapin akun lo..."
-                          : "Kojet AI lagi mikir..."}
+                          ? "Kojet AI lagi siapin workspace lo..."
+                          : "Kojet AI lagi mikir keras..."}
                       </span>
                     </div>
                   </div>
@@ -1279,20 +1377,29 @@ export default function App() {
               </div>
             </div>
 
+            {/* --- INPUT AREA --- */}
             <div className="p-2 md:p-4 bg-[#0f111a] md:bg-gradient-to-t md:from-[#0f111a] md:via-[#0f111a] md:to-transparent shrink-0 relative z-30">
-              <div className="max-w-4xl mx-auto w-full">
+              <div className="max-w-4xl mx-auto w-full relative">
+                {/* PREVIEW LAMPIRAN SEBELUM DIKIRIM */}
                 {imageAttachments.length > 0 && (
                   <div className="flex flex-wrap gap-2 md:gap-3 mb-2 md:mb-3 p-2 md:p-3 bg-white/5 backdrop-blur-md rounded-xl md:rounded-2xl border border-white/5">
                     {imageAttachments.map((img, idx) => (
                       <div
                         key={idx}
-                        className="relative group w-12 h-12 md:w-16 md:h-16 rounded-lg md:rounded-xl border border-gray-600 overflow-hidden shadow-lg"
+                        className="relative group w-12 h-12 md:w-16 md:h-16 rounded-lg md:rounded-xl border border-gray-600 overflow-hidden shadow-lg flex items-center justify-center bg-gray-800"
                       >
-                        <img
-                          src={img.url}
-                          alt="attachment"
-                          className="w-full h-full object-cover"
-                        />
+                        {!img.isDoc ? (
+                          <img
+                            src={img.url}
+                            alt="attachment"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <Lucide.FileText
+                            size={24}
+                            className="text-blue-400"
+                          />
+                        )}
                         <button
                           onClick={() => removeAttachment(idx)}
                           className="absolute inset-0 bg-red-500/80 md:opacity-0 md:group-hover:opacity-100 flex items-center justify-center transition-all opacity-100 sm:opacity-0"
@@ -1306,6 +1413,7 @@ export default function App() {
                     ))}
                   </div>
                 )}
+
                 <form
                   onSubmit={handleSendMessage}
                   className="relative flex items-end gap-1.5 md:gap-2 bg-[#161925] p-1.5 md:p-2 rounded-2xl md:rounded-3xl border border-gray-700/50 shadow-xl md:shadow-2xl md:shadow-black/50 focus-within:border-blue-500/50 focus-within:ring-2 md:focus-within:ring-4 focus-within:ring-blue-500/10 transition-all w-full"
@@ -1319,15 +1427,51 @@ export default function App() {
                     accept=".txt,.js,.html,.css,.py,.doc,.docx,.pdf,image/*"
                   />
 
-                  <button
-                    type="button"
-                    disabled={!isRegistered}
-                    onClick={() => fileInputRef.current?.click()}
-                    className={`p-2.5 md:p-3.5 rounded-full transition-colors shrink-0 ${!isRegistered ? "text-gray-600 opacity-50 cursor-not-allowed" : "text-gray-400 hover:text-white hover:bg-white/10"}`}
-                    title="Upload File/Foto"
-                  >
-                    <Lucide.Paperclip size={20} className="md:w-5 md:h-5" />
-                  </button>
+                  {/* MENU ATTACHMENT POPUP */}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      disabled={!isRegistered}
+                      onClick={() => setShowAttachMenu(!showAttachMenu)}
+                      className={`p-2.5 md:p-3.5 rounded-full transition-colors shrink-0 ${!isRegistered ? "text-gray-600 opacity-50 cursor-not-allowed" : "text-gray-400 hover:text-white hover:bg-white/10"}`}
+                      title="Upload Menu"
+                    >
+                      <Lucide.Paperclip size={20} className="md:w-5 md:h-5" />
+                    </button>
+
+                    {showAttachMenu && isRegistered && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-40"
+                          onClick={() => setShowAttachMenu(false)}
+                        ></div>
+                        <div className="absolute bottom-full left-0 mb-2 w-56 bg-[#1e1e2e] border border-gray-700 rounded-xl shadow-2xl p-1.5 z-50 flex flex-col gap-1 animate-fade-in">
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="flex items-center gap-3 w-full text-left p-2.5 hover:bg-white/10 rounded-lg text-sm text-gray-200 transition-colors"
+                          >
+                            <Lucide.FileUp
+                              size={16}
+                              className="text-blue-400"
+                            />{" "}
+                            Upload Foto/Dokumen
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleGenerateMode}
+                            className="flex items-center gap-3 w-full text-left p-2.5 hover:bg-white/10 rounded-lg text-sm text-gray-200 transition-colors"
+                          >
+                            <Lucide.ImagePlus
+                              size={16}
+                              className="text-purple-400"
+                            />{" "}
+                            Generate Foto AI
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
 
                   <div className="flex-1 relative w-full">
                     <textarea
@@ -1348,7 +1492,7 @@ export default function App() {
                           ? "Ketik nama panggilan lo buat mulai..."
                           : isListening
                             ? "Ngomong aja bro..."
-                            : "Ngomong aja bro..."
+                            : "Ketik tugas lo di sini..."
                       }
                       className={`w-full bg-transparent text-gray-100 placeholder-gray-500 md:placeholder-gray-600 rounded-xl md:rounded-2xl px-1 md:px-2 py-3 md:py-3.5 focus:outline-none resize-none min-h-[44px] md:min-h-[52px] max-h-[120px] md:max-h-[200px] custom-scrollbar block text-[14px] md:text-[15px] ${isListening ? "animate-pulse text-blue-400 placeholder-blue-500" : ""}`}
                       rows={Math.min(4, (input.match(/\n/g) || []).length + 1)}
@@ -1385,7 +1529,7 @@ export default function App() {
                 </form>
                 <div className="text-center mt-2 md:mt-3 hidden md:block">
                   <span className="text-[10px] md:text-[11px] font-medium text-gray-500 bg-[#161925] px-3 py-1 rounded-full border border-gray-800/50">
-                    Created by @{appSettings.ig} ✨ AI Partner Terbaik
+                    Kojet AI v1.1 ✨ Partner Nugas Terbaik Mahasiswa
                   </span>
                 </div>
               </div>
