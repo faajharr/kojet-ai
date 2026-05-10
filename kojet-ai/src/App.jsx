@@ -1146,9 +1146,9 @@ export default function App() {
                           className="p-3.5 md:p-4 rounded-xl md:rounded-2xl border border-white/5 bg-white/5 hover:bg-white/10 text-[13px] md:text-sm text-gray-300 transition-all hover:scale-[1.02] group"
                         >
                           <span className="flex items-center gap-2 text-blue-400 font-medium mb-1">
-                            <Lucide.FileText size={14} /> Bikin Esai / Makalah
+                            <Lucide.Feather size={14} /> KOJET AI?
                           </span>
-                          "Bantu gue buatin makalah 3 paragraf tentang AI..."
+                          "Kojet AI itu apa?"
                         </button>
                         <button
                           onClick={handleGenerateMode}
@@ -1466,7 +1466,7 @@ export default function App() {
                 </form>
                 <div className="text-center mt-2 md:mt-3 hidden md:block">
                   <span className="text-[10px] md:text-[11px] font-medium text-gray-500 bg-[#161925] px-3 py-1 rounded-full border border-gray-800/50">
-                    Kojet AI v1.2 ✨ Partner AI Karya Urang Sambas
+                    Kojet AI v1.2 ✨ Partner Chat Cerdas Mahasiswa
                   </span>
                 </div>
               </div>
