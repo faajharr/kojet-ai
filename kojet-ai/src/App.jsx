@@ -595,6 +595,8 @@ export default function App() {
     if (files.length === 0) return;
     files.forEach((file) => {
       const reader = new FileReader();
+
+      // 1. Gambar
       if (file.type.startsWith("image/")) {
         reader.onload = (event) =>
           setImageAttachments((prev) => [
@@ -607,13 +609,33 @@ export default function App() {
             },
           ]);
         reader.readAsDataURL(file);
-      } else {
-        reader.onload = (event) => {
+      }
+      // 2. PDF Asli (Bisa dikirim langsung ke Gemini 1.5 via Base64)
+      else if (file.type === "application/pdf") {
+        reader.onload = (event) =>
           setImageAttachments((prev) => [
             ...prev,
             {
               name: file.name,
               mimeType: file.type,
+              data: event.target.result.split(",")[1],
+              url: "",
+              isDoc: true,
+            },
+          ]);
+        reader.readAsDataURL(file);
+      }
+      // 3. Teks Murni (.txt, .js, .py, .html, dll)
+      else if (
+        file.type.startsWith("text/") ||
+        file.name.match(/\.(txt|js|py|html|css|json|md|csv)$/i)
+      ) {
+        reader.onload = (event) => {
+          setImageAttachments((prev) => [
+            ...prev,
+            {
+              name: file.name,
+              mimeType: "text/plain",
               data: "",
               url: "",
               isDoc: true,
@@ -622,6 +644,12 @@ export default function App() {
           ]);
         };
         reader.readAsText(file);
+      }
+      // 4. Word (.docx), Excel, ZIP (Format Biner yang menyebabkan text Alien "PK")
+      else {
+        alert(
+          `Bro, format file ${file.name} belum bisa dibaca mentah-mentah nih. Tolong save as / convert ke PDF dulu ya biar Kojet AI bisa baca!`,
+        );
       }
     });
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -634,18 +662,22 @@ export default function App() {
   const fetchGeminiResponse = async (chatHistory, currentImages) => {
     const url = `/api/gemini`;
     const historyToSend = [...chatHistory];
-    const docs = currentImages.filter((img) => img.isDoc);
-    if (docs.length > 0) {
-      let docText = "\n\n--- Referensi Dokumen ---\n";
-      docs.forEach(
+
+    // Gabungin file berformat Teks Mentah ke dalam prompt
+    const textDocs = currentImages.filter((img) => img.isDoc && img.textData);
+    if (textDocs.length > 0) {
+      let docText = "\n\n--- Referensi Dokumen Teks ---\n";
+      textDocs.forEach(
         (d) =>
-          (docText += `[${d.name}]:\n${d.textData.substring(0, 5000)}...\n`),
+          (docText += `[${d.name}]:\n${d.textData.substring(0, 10000)}...\n`),
       );
       historyToSend[historyToSend.length - 1].text += docText;
     }
+
+    // Kirim gambar dan PDF via Data Base64 (Format yang didukung API)
     const payload = {
       history: historyToSend,
-      images: currentImages.filter((img) => !img.isDoc) || [],
+      images: currentImages.filter((img) => img.data && !img.textData) || [],
     };
 
     const delays = [1000, 2000, 4000, 8000];
@@ -867,10 +899,11 @@ export default function App() {
           <ul className="text-[11px] space-y-2 text-gray-400">
             <li className="flex gap-2 items-start">
               <span className="text-blue-400 font-bold bg-blue-500/10 px-1 rounded">
-                v1.1.1
+                v1.1.2
               </span>
               <span className="leading-tight">
-                Perbaikan loading instan & fix riwayat sidebar. (10-05-2026)
+                Dukungan asli untuk upload PDF & Penolakan DOCX cerdas.
+                (10-05-2026)
               </span>
             </li>
             <li className="flex gap-2 items-start opacity-60">
@@ -1405,7 +1438,7 @@ export default function App() {
                 </form>
                 <div className="text-center mt-2 md:mt-3 hidden md:block">
                   <span className="text-[10px] md:text-[11px] font-medium text-gray-500 bg-[#161925] px-3 py-1 rounded-full border border-gray-800/50">
-                    Kojet AI v1.1.1 ✨ Partner Chat Cerdas Mahasiswa
+                    Kojet AI v1.1.2 ✨ Partner Chat Cerdas Mahasiswa
                   </span>
                 </div>
               </div>
