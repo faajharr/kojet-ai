@@ -149,7 +149,7 @@ const MessageFormatter = ({ text }) => {
         const encoded = encodeURIComponent(`\\color{white} ${cleanEq}`);
         return `<img src="https://latex.codecogs.com/svg.image?${encoded}" alt="Math" class="inline align-middle h-[1.2em] mx-1 drop-shadow-sm" />`;
       });
-
+      
     return { __html: formatted };
   };
 
@@ -175,15 +175,9 @@ const MessageFormatter = ({ text }) => {
 
 export default function App() {
   const [user, setUser] = useState(null);
-  const [activeUid, setActiveUid] = useState(
-    localStorage.getItem("kojet_active_uid") || null,
-  );
-  const [userName, setUserName] = useState(
-    localStorage.getItem("kojet_user_name") || "",
-  );
-  const [isRegistered, setIsRegistered] = useState(
-    localStorage.getItem("kojet_active_uid") ? true : false,
-  );
+  const [activeUid, setActiveUid] = useState(localStorage.getItem("kojet_active_uid") || null);
+  const [userName, setUserName] = useState(localStorage.getItem("kojet_user_name") || "");
+  const [isRegistered, setIsRegistered] = useState(localStorage.getItem("kojet_active_uid") ? true : false);
   const [viewMode, setViewMode] = useState("chat");
 
   const [messages, setMessages] = useState(() => {
@@ -199,10 +193,7 @@ export default function App() {
     return localStorage.getItem("kojet_current_chat_id") || generateId();
   });
 
-  const [appSettings, setAppSettings] = useState({
-    ig: "faajharr_",
-    wa: "083153437501",
-  });
+  const [appSettings, setAppSettings] = useState({ ig: "faajharr_", wa: "083153437501" });
   const [conversations, setConversations] = useState([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -237,10 +228,7 @@ export default function App() {
   useEffect(() => {
     const initAuth = async () => {
       try {
-        if (
-          typeof __initial_auth_token !== "undefined" &&
-          __initial_auth_token
-        ) {
+        if (typeof __initial_auth_token !== "undefined" && __initial_auth_token) {
           await signInWithCustomToken(auth, __initial_auth_token);
         } else {
           await signInAnonymously(auth);
@@ -269,57 +257,32 @@ export default function App() {
         localStorage.setItem("kojet_active_uid", targetUid);
         localStorage.setItem("kojet_user_name", data.name);
       } else {
-        // Jangan paksa hapus state jika hanya pergantian akun sementara,
-        // pastikan UID memang tidak ada di DB
         if (!activeUid) {
-          setIsRegistered(false);
-          localStorage.removeItem("kojet_active_uid");
-          localStorage.removeItem("kojet_user_name");
+           setIsRegistered(false);
+           localStorage.removeItem("kojet_active_uid");
+           localStorage.removeItem("kojet_user_name");
         }
       }
     });
     return () => unsubProfile();
   }, [user, activeUid]);
 
-  // Listener Riwayat Chat - BUG FIXED: Cepat & Gak Nyangkut
+  // Listener Riwayat Chat - BUG CHAT BARU FIXED
   useEffect(() => {
     if (!activeUid) return;
 
-    const convRef = collection(
-      db,
-      "artifacts",
-      appId,
-      "users",
-      activeUid,
-      "conversations",
-    );
+    const convRef = collection(db, "artifacts", appId, "users", activeUid, "conversations");
     const unsubConv = onSnapshot(convRef, (snapshot) => {
       const data = [];
       snapshot.forEach((doc) => data.push(doc.data()));
       data.sort((a, b) => b.updatedAt - a.updatedAt);
       setConversations(data);
-
-      // Cari percakapan terakhir yang sedang aktif
-      const currentConv = data.find((c) => c.id === currentChatId);
-
-      // Jika percakapan ketemu, masukkan isinya. TAPI JANGAN ubah kalau user lagi ketik/ngirim pesan
-      if (
-        currentConv &&
-        currentConv.messages &&
-        currentConv.messages.length > 0
-      ) {
-        if (!isLoading && messages.length === 0) {
-          setMessages(currentConv.messages);
-        }
-      } else if (data.length > 0 && messages.length === 0 && !isLoading) {
-        // Jika buka aplikasi, otomatis load chat paling atas
-        setCurrentChatId(data[0].id);
-        setMessages(data[0].messages);
-      }
+      // Kita hapus kode yang maksa overwrite layar kosong di sini. 
+      // Layar hanya update otomatis jika user nge-klik dari sidebar atau login pertama kali.
     });
 
     return () => unsubConv();
-  }, [activeUid, currentChatId, isLoading]);
+  }, [activeUid]);
 
   useEffect(() => {
     const settingsRef = doc(db, "artifacts", appId, "public", "settings");
@@ -331,34 +294,25 @@ export default function App() {
     return () => unsubSettings();
   }, []);
 
-  // Listener Admin Dashboard - BUG FIXED
+  // Listener Admin Dashboard
   useEffect(() => {
     if (viewMode !== "admin_dashboard") return;
-    // Mengambil data SEMUA user. Bypass rule firebase karena data ini
-    // disimpan di root public khusus admin jika lo set up rules nya dengan benar.
-    // TAPI karena rules firebase lo ketat, kita pakai cara ini:
     const fetchAdminStats = async () => {
-      try {
-        const allUsersRef = collection(db, "artifacts", appId, "user_profiles");
-        const snapshot = await getDocs(allUsersRef);
-        const stats = [];
-        snapshot.forEach((doc) => stats.push(doc.data()));
-        stats.sort((a, b) => b.lastActive - a.lastActive);
-        setAllUsersStats(stats);
-      } catch (e) {
-        console.error(
-          "Admin dashboard butuh Firebase Rules tambahan untuk baca user_profiles global",
-          e,
-        );
-        alert(
-          "Oops! Admin tidak bisa melihat total user. Pastikan Firebase Firestore Rules untuk '/artifacts/{appId}/user_profiles' diset ke 'allow read: if true;' ya Jar.",
-        );
-      }
+        try {
+            const allUsersRef = collection(db, "artifacts", appId, "user_profiles");
+            const snapshot = await getDocs(allUsersRef);
+            const stats = [];
+            snapshot.forEach((doc) => stats.push(doc.data()));
+            stats.sort((a, b) => b.lastActive - a.lastActive);
+            setAllUsersStats(stats);
+        } catch(e) {
+            console.error("Admin dashboard butuh Firebase Rules tambahan untuk baca user_profiles global", e);
+            alert("Oops! Admin tidak bisa melihat total user. Pastikan Firebase Firestore Rules untuk '/artifacts/{appId}/user_profiles' diset ke 'allow read: if true;' ya Jar.");
+        }
     };
     fetchAdminStats();
   }, [viewMode]);
 
-  // HANDLE REGISTER NAME - DI BIKIN LEBIH CEPAT!
   const handleRegisterName = async (nameInput) => {
     let currentUser = user || auth.currentUser;
     if (!currentUser) {
@@ -385,30 +339,16 @@ export default function App() {
       if (existingProfile) {
         // USER LAMA
         targetUid = existingProfile.uid;
-
-        // Update waktu aktif
-        await setDoc(
-          doc(db, "artifacts", appId, "user_profiles", targetUid),
-          { lastActive: Date.now() },
-          { merge: true },
-        );
-
-        // Setup State secara instan biar gak perlu nunggu
+        
+        await setDoc(doc(db, "artifacts", appId, "user_profiles", targetUid), { lastActive: Date.now() }, { merge: true });
+        
         setActiveUid(targetUid);
         setUserName(existingProfile.name);
         setIsRegistered(true);
         localStorage.setItem("kojet_active_uid", targetUid);
         localStorage.setItem("kojet_user_name", existingProfile.name);
 
-        // Tarik data chat
-        const convRef = collection(
-          db,
-          "artifacts",
-          appId,
-          "users",
-          targetUid,
-          "conversations",
-        );
+        const convRef = collection(db,"artifacts",appId,"users",targetUid,"conversations");
         const convSnap = await getDocs(convRef);
         const allConvs = [];
         convSnap.forEach((d) => allConvs.push(d.data()));
@@ -442,7 +382,7 @@ export default function App() {
         setIsRegistered(true);
         localStorage.setItem("kojet_active_uid", targetUid);
         localStorage.setItem("kojet_user_name", nameInput);
-
+        
         setMessages([
           {
             role: "model",
@@ -454,16 +394,12 @@ export default function App() {
       console.error("Gagal login:", error);
       alert("Gagal konek ke database bro. Cek sinyal lo ya!");
     } finally {
-      setIsLoading(false); // Pastikan loading hilang!
+      setIsLoading(false);
     }
   };
 
   const handleLogout = () => {
-    if (
-      window.confirm(
-        "Yakin mau ganti akun/nama? Riwayat chat lo aman tersimpan di database kok.",
-      )
-    ) {
+    if (window.confirm("Yakin mau ganti akun/nama? Riwayat chat lo aman tersimpan di database kok.")) {
       localStorage.removeItem("kojet_active_uid");
       localStorage.removeItem("kojet_user_name");
       localStorage.removeItem("kojet_messages_cache");
@@ -480,21 +416,10 @@ export default function App() {
 
   const handleDeleteChat = async (e, chatId) => {
     e.stopPropagation();
-    if (!window.confirm("Beneran mau hapus percakapan ini secara permanen?"))
-      return;
+    if (!window.confirm("Beneran mau hapus percakapan ini secara permanen?")) return;
 
     try {
-      await deleteDoc(
-        doc(
-          db,
-          "artifacts",
-          appId,
-          "users",
-          activeUid,
-          "conversations",
-          chatId,
-        ),
-      );
+      await deleteDoc(doc(db, "artifacts", appId, "users", activeUid, "conversations", chatId));
       if (currentChatId === chatId) {
         setMessages([]);
         setCurrentChatId(generateId());
@@ -509,11 +434,7 @@ export default function App() {
     const ig = e.target.ig.value.trim();
     const wa = e.target.wa.value.trim();
     try {
-      await setDoc(
-        doc(db, "artifacts", appId, "public", "settings"),
-        { ig, wa },
-        { merge: true },
-      );
+      await setDoc(doc(db, "artifacts", appId, "public", "settings"), { ig, wa }, { merge: true });
       alert("Pengaturan kontak berhasil disimpan!");
     } catch (err) {
       alert("Gagal menyimpan pengaturan.");
@@ -525,49 +446,28 @@ export default function App() {
     let title = "Obrolan Baru";
     const firstUserMsg = msgs.find((m) => m.role === "user");
     if (firstUserMsg) {
-      title =
-        firstUserMsg.text
-          .replace(/\[Mengirim Lampiran\]/g, "")
-          .substring(0, 30)
-          .trim() || "Obrolan dengan Gambar";
+      title = firstUserMsg.text.replace(/\[Mengirim Lampiran\]/g, "").substring(0, 30).trim() || "Obrolan dengan Gambar";
       if (title.length >= 30) title += "...";
     }
 
     try {
       const userMessageCount = msgs.filter((m) => m.role === "user").length;
 
-      await setDoc(
-        doc(
-          db,
-          "artifacts",
-          appId,
-          "users",
-          activeUid,
-          "conversations",
-          chatId,
-        ),
-        {
+      await setDoc(doc(db, "artifacts", appId, "users", activeUid, "conversations", chatId), {
           id: chatId,
           title,
           messages: msgs,
           updatedAt: Date.now(),
-        },
-      );
+      });
 
-      // Update total info user (Optional, kadang diblokir rules)
       try {
-        await setDoc(
-          doc(db, "artifacts", appId, "user_profiles", activeUid),
-          {
-            lastActive: Date.now(),
-            totalChats:
-              conversations.length +
-              (conversations.find((c) => c.id === chatId) ? 0 : 1),
-            totalMessages: userMessageCount,
-          },
-          { merge: true },
-        );
-      } catch (e) {}
+         await setDoc(doc(db, "artifacts", appId, "user_profiles", activeUid), {
+           lastActive: Date.now(),
+           totalChats: conversations.length + (conversations.find((c) => c.id === chatId) ? 0 : 1),
+           totalMessages: userMessageCount,
+         }, { merge: true });
+      } catch(e) {}
+
     } catch (err) {
       console.error("Gagal simpan percakapan:", err);
     }
@@ -575,20 +475,13 @@ export default function App() {
 
   const handleToggleSpeech = (text, index) => {
     if (!("speechSynthesis" in window)) {
-      alert(
-        "Browser lo nggak support fitur suara bro, coba update Chrome/Edge.",
-      );
+      alert("Browser lo nggak support fitur suara bro, coba update Chrome/Edge.");
       return;
     }
     const synth = window.speechSynthesis;
     if (speakingIndex === index) {
-      if (isPaused) {
-        synth.resume();
-        setIsPaused(false);
-      } else {
-        synth.pause();
-        setIsPaused(true);
-      }
+      if (isPaused) { synth.resume(); setIsPaused(false); } 
+      else { synth.pause(); setIsPaused(true); }
       return;
     }
     synth.cancel();
@@ -597,10 +490,7 @@ export default function App() {
 
     let cleanText = text.replace(/```[\s\S]*?```/g, "Berikut adalah kodenya. ");
     cleanText = cleanText.replace(/[*_#]/g, "");
-    cleanText = cleanText.replace(
-      /\$\$([\s\S]*?)\$\$/g,
-      "sebuah rumus matematika.",
-    );
+    cleanText = cleanText.replace(/\$\$([\s\S]*?)\$\$/g, "sebuah rumus matematika.");
     cleanText = cleanText.replace(/\$([^$\n]+)\$/g, "rumus matematika.");
 
     const utterance = new SpeechSynthesisUtterance(cleanText);
@@ -608,28 +498,16 @@ export default function App() {
     utterance.rate = 1.0;
     window.speechUtterance = utterance;
 
-    utterance.onend = () => {
-      setSpeakingIndex(null);
-      setIsPaused(false);
-    };
-    utterance.onerror = (e) => {
-      if (e.error !== "canceled") {
-        setSpeakingIndex(null);
-        setIsPaused(false);
-      }
-    };
+    utterance.onend = () => { setSpeakingIndex(null); setIsPaused(false); };
+    utterance.onerror = (e) => { if (e.error !== "canceled") { setSpeakingIndex(null); setIsPaused(false); } };
     synth.speak(utterance);
   };
 
   const exportToWord = (content) => {
-    const preHtml =
-      "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='[http://www.w3.org/TR/REC-html40](http://www.w3.org/TR/REC-html40)'><head><meta charset='utf-8'><title>Catatan Kojet AI</title></head><body>";
+    const preHtml = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='[http://www.w3.org/TR/REC-html40](http://www.w3.org/TR/REC-html40)'><head><meta charset='utf-8'><title>Catatan Kojet AI</title></head><body>";
     const postHtml = "</body></html>";
     let htmlContent = content
-      .replace(
-        /```[\s\S]*?```/g,
-        "<p>[Kode dilampirkan terpisah, silakan copy dari web Kojet AI]</p>",
-      )
+      .replace(/```[\s\S]*?```/g, "<p>[Kode dilampirkan terpisah, silakan copy dari web Kojet AI]</p>")
       .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
       .replace(/\$\$([\s\S]*?)\$\$/g, "<p>[Rumus Matematika]</p>")
       .replace(/\$([^$\n]+)\$/g, "[Rumus]")
@@ -647,26 +525,19 @@ export default function App() {
   const exportToPDF = (content) => {
     const printWindow = window.open("", "_blank");
     let htmlContent = content
-      .replace(
-        /```[\s\S]*?```/g,
-        "<br><i>[Kode dilampirkan terpisah di web]</i><br>",
-      )
+      .replace(/```[\s\S]*?```/g, "<br><i>[Kode dilampirkan terpisah di web]</i><br>")
       .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
       .replace(/\$\$([\s\S]*?)\$\$/g, "<p><i>[Rumus Matematika]</i></p>")
       .replace(/\$([^$\n]+)\$/g, "<i>[Rumus]</i>")
       .replace(/\n/g, "<br>");
-    printWindow.document.write(
-      `<html><head><title>Generated by Kojet AI</title><style>body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; padding: 40px; max-width: 800px; margin: auto; } h1, h2, h3 { color: #111; } strong { color: #000; }</style></head><body>${htmlContent}</body></html>`,
-    );
+    printWindow.document.write(`<html><head><title>Generated by Kojet AI</title><style>body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; padding: 40px; max-width: 800px; margin: auto; } h1, h2, h3 { color: #111; } strong { color: #000; }</style></head><body>${htmlContent}</body></html>`);
     printWindow.document.close();
     setTimeout(() => printWindow.print(), 500);
   };
 
   const toggleListening = () => {
-    const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition)
-      return alert("Browser tidak mendukung Dikte Suara.");
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return alert("Browser tidak mendukung Dikte Suara.");
     if (isListening) return setIsListening(false);
     const recognition = new SpeechRecognition();
     recognition.lang = "id-ID";
@@ -674,13 +545,8 @@ export default function App() {
     recognition.onstart = () => setIsListening(true);
     recognition.onresult = (event) => {
       let currentTranscript = "";
-      for (let i = event.resultIndex; i < event.results.length; i++)
-        currentTranscript += event.results[i][0].transcript;
-      if (event.results[0].isFinal)
-        setInput(
-          (prev) =>
-            prev + (prev.endsWith(" ") ? "" : " ") + currentTranscript + " ",
-        );
+      for (let i = event.resultIndex; i < event.results.length; i++) currentTranscript += event.results[i][0].transcript;
+      if (event.results[0].isFinal) setInput((prev) => prev + (prev.endsWith(" ") ? "" : " ") + currentTranscript + " ");
     };
     recognition.onerror = () => setIsListening(false);
     recognition.onend = () => setIsListening(false);
@@ -694,29 +560,11 @@ export default function App() {
       const reader = new FileReader();
       if (file.type.startsWith("image/")) {
         reader.onload = (event) =>
-          setImageAttachments((prev) => [
-            ...prev,
-            {
-              name: file.name,
-              mimeType: file.type,
-              data: event.target.result.split(",")[1],
-              url: event.target.result,
-            },
-          ]);
+          setImageAttachments((prev) => [...prev, { name: file.name, mimeType: file.type, data: event.target.result.split(",")[1], url: event.target.result }]);
         reader.readAsDataURL(file);
       } else {
         reader.onload = (event) => {
-          setImageAttachments((prev) => [
-            ...prev,
-            {
-              name: file.name,
-              mimeType: file.type,
-              data: "",
-              url: "",
-              isDoc: true,
-              textData: event.target.result,
-            },
-          ]);
+          setImageAttachments((prev) => [...prev, { name: file.name, mimeType: file.type, data: "", url: "", isDoc: true, textData: event.target.result }]);
         };
         reader.readAsText(file);
       }
@@ -725,39 +573,25 @@ export default function App() {
     setShowAttachMenu(false);
   };
 
-  const removeAttachment = (index) =>
-    setImageAttachments((prev) => prev.filter((_, i) => i !== index));
+  const removeAttachment = (index) => setImageAttachments((prev) => prev.filter((_, i) => i !== index));
 
   const fetchGeminiResponse = async (chatHistory, currentImages) => {
     const url = `/api/gemini`;
     const historyToSend = [...chatHistory];
-    const docs = currentImages.filter((img) => img.isDoc);
+    const docs = currentImages.filter(img => img.isDoc);
     if (docs.length > 0) {
-      let docText = "\n\n--- Referensi Dokumen ---\n";
-      docs.forEach(
-        (d) =>
-          (docText += `[${d.name}]:\n${d.textData.substring(0, 5000)}...\n`),
-      );
-      historyToSend[historyToSend.length - 1].text += docText;
+       let docText = "\n\n--- Referensi Dokumen ---\n";
+       docs.forEach(d => docText += `[${d.name}]:\n${d.textData.substring(0, 5000)}...\n`);
+       historyToSend[historyToSend.length - 1].text += docText;
     }
-    const payload = {
-      history: historyToSend,
-      images: currentImages.filter((img) => !img.isDoc) || [],
-    };
+    const payload = { history: historyToSend, images: currentImages.filter(img => !img.isDoc) || [] };
 
     const delays = [1000, 2000, 4000, 8000];
     for (let i = 0; i < 4; i++) {
       try {
-        const response = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+        const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
         const data = await response.json();
-        if (!response.ok)
-          throw new Error(
-            data.error || `HTTP error! status: ${response.status}`,
-          );
+        if (!response.ok) throw new Error(data.error || `HTTP error! status: ${response.status}`);
         return data.text;
       } catch (err) {
         if (i === 3) throw new Error("Gagal menghubungi server Vercel.");
@@ -770,11 +604,7 @@ export default function App() {
     e?.preventDefault();
     const currentInput = input.trim();
 
-    if (currentInput === ADMIN_SECRET_COMMAND) {
-      setViewMode("admin_dashboard");
-      setInput("");
-      return;
-    }
+    if (currentInput === ADMIN_SECRET_COMMAND) { setViewMode("admin_dashboard"); setInput(""); return; }
     if ((!currentInput && imageAttachments.length === 0) || isLoading) return;
 
     if (!isRegistered) {
@@ -784,17 +614,9 @@ export default function App() {
     }
 
     let textToSave = currentInput;
-    const uiAttachments = imageAttachments.map((att) => ({
-      name: att.name,
-      url: att.url,
-      isDoc: att.isDoc || false,
-    }));
-    const userMessage = {
-      role: "user",
-      text: textToSave || "[Mengirim Lampiran]",
-      attachments: uiAttachments,
-    };
-
+    const uiAttachments = imageAttachments.map(att => ({ name: att.name, url: att.url, isDoc: att.isDoc || false }));
+    const userMessage = { role: "user", text: textToSave || "[Mengirim Lampiran]", attachments: uiAttachments };
+    
     const newMessages = [...messages, userMessage];
     const imagesToSend = [...imageAttachments];
 
@@ -803,33 +625,17 @@ export default function App() {
     setImageAttachments([]);
     setIsLoading(true);
 
-    if ("speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-      setSpeakingIndex(null);
-      setIsPaused(false);
-    }
+    if ("speechSynthesis" in window) { window.speechSynthesis.cancel(); setSpeakingIndex(null); setIsPaused(false); }
 
     saveConversation(currentChatId, newMessages);
 
     try {
-      const aiTextResponse = await fetchGeminiResponse(
-        newMessages,
-        imagesToSend,
-      );
-      const updatedMessages = [
-        ...newMessages,
-        { role: "model", text: aiTextResponse },
-      ];
+      const aiTextResponse = await fetchGeminiResponse(newMessages, imagesToSend);
+      const updatedMessages = [...newMessages, { role: "model", text: aiTextResponse }];
       setMessages(updatedMessages);
       saveConversation(currentChatId, updatedMessages);
     } catch (error) {
-      setMessages([
-        ...newMessages,
-        {
-          role: "model",
-          text: "Waduh sorry bro, server Kojet AI lagi mikir keras. Coba kirim ulang ya!",
-        },
-      ]);
+      setMessages([...newMessages, { role: "model", text: "Waduh sorry bro, server Kojet AI lagi mikir keras. Coba kirim ulang ya!" }]);
     } finally {
       setIsLoading(false);
     }
@@ -840,17 +646,14 @@ export default function App() {
     setShowAttachMenu(false);
   };
 
+  // FUNGSI CHAT BARU - BUG SUDAH DIPERBAIKI!
   const createNewChat = () => {
-    if (!isRegistered)
-      return alert("Isi nama lo di chat dulu ya bro sebelum bikin chat baru!");
-    if ("speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-      setSpeakingIndex(null);
-      setIsPaused(false);
-    }
+    if (!isRegistered) return alert("Isi nama lo di chat dulu ya bro sebelum bikin chat baru!");
+    if ("speechSynthesis" in window) { window.speechSynthesis.cancel(); setSpeakingIndex(null); setIsPaused(false); }
+    
     const newId = generateId();
     setCurrentChatId(newId);
-    setMessages([]);
+    setMessages([]); // Kosongkan layar secara instan
     setImageAttachments([]);
     setIsSidebarOpen(false);
   };
@@ -858,11 +661,7 @@ export default function App() {
   const loadChat = (chatId) => {
     const chat = conversations.find((c) => c.id === chatId);
     if (chat) {
-      if ("speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
-        setSpeakingIndex(null);
-        setIsPaused(false);
-      }
+      if ("speechSynthesis" in window) { window.speechSynthesis.cancel(); setSpeakingIndex(null); setIsPaused(false); }
       setCurrentChatId(chat.id);
       setMessages(chat.messages || []);
       setImageAttachments([]);
@@ -872,81 +671,39 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-[#0f111a] text-gray-100 font-sans overflow-hidden">
-      {isSidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/70 z-40 md:hidden backdrop-blur-sm transition-opacity"
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
+      {isSidebarOpen && <div className="fixed inset-0 bg-black/70 z-40 md:hidden backdrop-blur-sm transition-opacity" onClick={() => setIsSidebarOpen(false)} />}
 
       {/* --- SIDEBAR --- */}
-      <aside
-        className={`fixed md:static inset-y-0 left-0 z-50 w-[280px] bg-[#161925] border-r border-gray-800/60 transform transition-transform duration-300 ease-in-out flex flex-col shadow-2xl md:shadow-none ${isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
-      >
+      <aside className={`fixed md:static inset-y-0 left-0 z-50 w-[280px] bg-[#161925] border-r border-gray-800/60 transform transition-transform duration-300 ease-in-out flex flex-col shadow-2xl md:shadow-none ${isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}>
         <div className="p-4 md:p-5 flex items-center justify-between border-b border-gray-800/50">
           <div className="flex items-center gap-3">
             <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-2 rounded-xl shadow-lg shadow-blue-500/20">
               <Lucide.TerminalSquare size={20} className="text-white" />
             </div>
-            <span className="text-xl font-bold tracking-wide text-white">
-              Kojet
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">
-                AI
-              </span>
-            </span>
+            <span className="text-xl font-bold tracking-wide text-white">Kojet<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">AI</span></span>
           </div>
-          <button
-            onClick={() => setIsSidebarOpen(false)}
-            className="md:hidden text-gray-400 hover:text-white bg-white/5 p-1.5 rounded-lg transition-colors"
-          >
-            <Lucide.X size={20} />
-          </button>
+          <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-gray-400 hover:text-white bg-white/5 p-1.5 rounded-lg transition-colors"><Lucide.X size={20} /></button>
         </div>
 
         <div className="px-4 py-4">
-          <button
-            onClick={() => {
-              createNewChat();
-              setViewMode("chat");
-            }}
-            className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white hover:bg-blue-500 py-3 md:py-2.5 px-4 rounded-xl transition-all font-semibold text-sm shadow-[0_0_15px_rgba(59,130,246,0.2)]"
-          >
+          <button onClick={() => { createNewChat(); setViewMode("chat"); }} className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white hover:bg-blue-500 py-3 md:py-2.5 px-4 rounded-xl transition-all font-semibold text-sm shadow-[0_0_15px_rgba(59,130,246,0.2)]">
             <Lucide.Plus size={18} /> Chat Baru
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-3 py-2 custom-scrollbar">
-          <p className="text-[10px] md:text-[11px] font-bold text-gray-500 mb-3 px-3 uppercase tracking-widest">
-            Riwayat Percakapan
-          </p>
+          <p className="text-[10px] md:text-[11px] font-bold text-gray-500 mb-3 px-3 uppercase tracking-widest">Riwayat Percakapan</p>
           {conversations.length === 0 ? (
-            <p className="text-sm text-gray-600 px-3 italic">
-              Belum ada history.
-            </p>
+            <p className="text-sm text-gray-600 px-3 italic">Belum ada history.</p>
           ) : (
             <div className="space-y-1.5">
               {conversations.map((conv) => (
                 <div key={conv.id} className="relative group">
-                  <button
-                    onClick={() => {
-                      loadChat(conv.id);
-                      setViewMode("chat");
-                    }}
-                    className={`w-full flex items-center gap-3 text-left px-3 py-3 md:py-2.5 rounded-lg transition-all text-sm pr-10 ${currentChatId === conv.id && viewMode === "chat" ? "bg-blue-600/10 text-blue-400 border border-blue-500/20" : "text-gray-400 hover:bg-white/5 hover:text-gray-200 border border-transparent"}`}
-                  >
-                    <Lucide.MessageSquare
-                      size={16}
-                      className={`shrink-0 ${currentChatId === conv.id && viewMode === "chat" ? "text-blue-500" : "text-gray-500"}`}
-                    />
+                  <button onClick={() => { loadChat(conv.id); setViewMode("chat"); }} className={`w-full flex items-center gap-3 text-left px-3 py-3 md:py-2.5 rounded-lg transition-all text-sm pr-10 ${currentChatId === conv.id && viewMode === "chat" ? "bg-blue-600/10 text-blue-400 border border-blue-500/20" : "text-gray-400 hover:bg-white/5 hover:text-gray-200 border border-transparent"}`}>
+                    <Lucide.MessageSquare size={16} className={`shrink-0 ${currentChatId === conv.id && viewMode === "chat" ? "text-blue-500" : "text-gray-500"}`} />
                     <span className="truncate">{conv.title}</span>
                   </button>
-                  <button
-                    onClick={(e) => handleDeleteChat(e, conv.id)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity rounded-md hover:bg-red-500/10"
-                    title="Hapus Chat"
-                  >
-                    <Lucide.Trash2 size={14} />
-                  </button>
+                  <button onClick={(e) => handleDeleteChat(e, conv.id)} className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity rounded-md hover:bg-red-500/10" title="Hapus Chat"><Lucide.Trash2 size={14} /></button>
                 </div>
               ))}
             </div>
@@ -955,47 +712,30 @@ export default function App() {
 
         {/* INFO UPDATE SIDEBAR */}
         <div className="px-4 py-3 border-t border-gray-800/60 bg-[#12141c]">
-          <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-            <Lucide.Info size={12} /> Info Update
-          </h4>
-          <ul className="text-[11px] space-y-2 text-gray-400">
-            <li className="flex gap-2 items-start">
-              <span className="text-blue-400 font-bold bg-blue-500/10 px-1 rounded">
-                v1.1
-              </span>
-              <span className="leading-tight">
-                Perbaikan loading instan, bug admin fixed, update gaya bahasa
-                AI. (10-05-2026)
-              </span>
-            </li>
-            <li className="flex gap-2 items-start opacity-60">
-              <span className="font-bold">v1.0</span>
-              <span>Peluncuran perdana Kojet AI. (09-05-2026)</span>
-            </li>
-          </ul>
+           <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-1.5"><Lucide.Info size={12}/> Info Update</h4>
+           <ul className="text-[11px] space-y-2 text-gray-400">
+              <li className="flex gap-2 items-start">
+                <span className="text-blue-400 font-bold bg-blue-500/10 px-1 rounded">v1.1.1</span> 
+                <span className="leading-tight">Perbaikan bug "Chat Baru" yang terhambat riwayat lama. (10-05-2026)</span>
+              </li>
+              <li className="flex gap-2 items-start opacity-60">
+                <span className="font-bold">v1.1</span> 
+                <span>Menu upload, render matematika instan. (10-05-2026)</span>
+              </li>
+           </ul>
         </div>
 
         <div className="p-4 border-t border-gray-800/60 bg-[#161925]">
           <div className="flex items-center gap-3 text-sm text-gray-400 bg-black/20 p-2.5 rounded-xl border border-white/5">
             <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-gray-700 to-gray-600 flex items-center justify-center shrink-0 uppercase">
-              <span className="text-xs font-bold text-white">
-                {userName ? userName.substring(0, 2) : "?"}
-              </span>
+              <span className="text-xs font-bold text-white">{userName ? userName.substring(0, 2) : "?"}</span>
             </div>
             <div className="truncate flex-1">
-              <p className="font-semibold text-gray-200 text-xs truncate">
-                {userName || "Tamu"}
-              </p>
-              <p className="text-[10px] font-mono opacity-60 truncate mt-0.5">
-                ID: {activeUid ? activeUid.substring(0, 6) : "Unknown"}
-              </p>
+              <p className="font-semibold text-gray-200 text-xs truncate">{userName || "Tamu"}</p>
+              <p className="text-[10px] font-mono opacity-60 truncate mt-0.5">ID: {activeUid ? activeUid.substring(0, 6) : "Unknown"}</p>
             </div>
             {isRegistered && (
-              <button
-                onClick={handleLogout}
-                className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-                title="Ganti Nama / Logout"
-              >
+              <button onClick={handleLogout} className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors" title="Ganti Nama / Logout">
                 <Lucide.LogOut size={16} />
               </button>
             )}
@@ -1009,50 +749,19 @@ export default function App() {
 
         <header className="h-14 md:h-16 flex items-center justify-between px-3 md:px-6 border-b border-white/5 bg-[#0f111a]/80 backdrop-blur-xl sticky top-0 z-20 shrink-0">
           <div className="flex items-center gap-2 md:gap-3">
-            <button
-              onClick={() => setIsSidebarOpen(true)}
-              className="md:hidden p-2 -ml-1 text-gray-400 hover:text-white rounded-lg bg-white/5 transition-colors"
-            >
-              <Lucide.Menu size={22} />
-            </button>
+            <button onClick={() => setIsSidebarOpen(true)} className="md:hidden p-2 -ml-1 text-gray-400 hover:text-white rounded-lg bg-white/5 transition-colors"><Lucide.Menu size={22} /></button>
             <h1 className="text-[15px] md:text-sm font-semibold text-gray-200 flex items-center gap-2">
-              <Lucide.Sparkles
-                size={16}
-                className={
-                  viewMode === "chat" ? "text-blue-400" : "text-emerald-400"
-                }
-              />
+              <Lucide.Sparkles size={16} className={viewMode === "chat" ? "text-blue-400" : "text-emerald-400"} />
               {viewMode === "chat" ? "Kojet AI" : "Admin Dashboard"}
             </h1>
           </div>
           <div className="flex items-center gap-3 md:gap-4 text-[10px] md:text-[11px] text-gray-400">
             {viewMode === "admin_dashboard" ? (
-              <button
-                onClick={() => setViewMode("chat")}
-                className="flex items-center gap-1.5 hover:text-red-400 transition-colors bg-red-500/10 text-red-500 px-3 py-1.5 rounded-md"
-              >
-                <Lucide.LogOut size={14} /> Tutup Admin
-              </button>
+              <button onClick={() => setViewMode("chat")} className="flex items-center gap-1.5 hover:text-red-400 transition-colors bg-red-500/10 text-red-500 px-3 py-1.5 rounded-md"><Lucide.LogOut size={14} /> Tutup Admin</button>
             ) : (
               <>
-                <a
-                  href={`https://instagram.com/${appSettings.ig}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-1 hover:text-blue-400 transition-colors bg-white/5 px-2 py-1 md:py-1.5 rounded-md"
-                >
-                  <Lucide.Camera size={12} />{" "}
-                  <span className="hidden sm:inline">@{appSettings.ig}</span>
-                </a>
-                <a
-                  href={`https://wa.me/${appSettings.wa}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-1 hover:text-green-400 transition-colors bg-white/5 px-2 py-1 md:py-1.5 rounded-md"
-                >
-                  <Lucide.Phone size={12} />{" "}
-                  <span className="hidden sm:inline">{appSettings.wa}</span>
-                </a>
+                <a href={`https://instagram.com/${appSettings.ig}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:text-blue-400 transition-colors bg-white/5 px-2 py-1 md:py-1.5 rounded-md"><Lucide.Camera size={12} /> <span className="hidden sm:inline">@{appSettings.ig}</span></a>
+                <a href={`https://wa.me/${appSettings.wa}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:text-green-400 transition-colors bg-white/5 px-2 py-1 md:py-1.5 rounded-md"><Lucide.Phone size={12} /> <span className="hidden sm:inline">{appSettings.wa}</span></a>
               </>
             )}
           </div>
@@ -1068,40 +777,23 @@ export default function App() {
                     <Lucide.Users size={20} className="text-blue-400" />
                   </div>
                   <div>
-                    <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">
-                      Total User
-                    </p>
-                    <h3 className="text-2xl font-bold text-white">
-                      {allUsersStats.length}
-                    </h3>
+                    <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">Total User</p>
+                    <h3 className="text-2xl font-bold text-white">{allUsersStats.length}</h3>
                   </div>
                 </div>
                 <div className="bg-[#161925] border border-gray-800 p-6 rounded-2xl flex items-center gap-4">
                   <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center border border-green-500/30">
-                    <Lucide.MessageSquare
-                      size={20}
-                      className="text-green-400"
-                    />
+                    <Lucide.MessageSquare size={20} className="text-green-400" />
                   </div>
                   <div>
-                    <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">
-                      Total Pesan Dibuat
-                    </p>
-                    <h3 className="text-2xl font-bold text-white">
-                      {allUsersStats.reduce(
-                        (acc, curr) => acc + (curr.totalMessages || 0),
-                        0,
-                      )}
-                    </h3>
+                    <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">Total Pesan Dibuat</p>
+                    <h3 className="text-2xl font-bold text-white">{allUsersStats.reduce((acc, curr) => acc + (curr.totalMessages || 0), 0)}</h3>
                   </div>
                 </div>
               </div>
               <div className="bg-[#161925] border border-gray-800 rounded-2xl overflow-hidden shadow-xl">
                 <div className="px-6 py-4 border-b border-gray-800 flex justify-between items-center bg-[#1a1d2d]">
-                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                    <Lucide.BarChart3 size={16} className="text-blue-400" />{" "}
-                    Data Pengguna Kojet AI
-                  </h3>
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2"><Lucide.BarChart3 size={16} className="text-blue-400" /> Data Pengguna Kojet AI</h3>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm text-gray-400">
@@ -1110,31 +802,16 @@ export default function App() {
                         <th className="px-6 py-4 font-medium">Nama User</th>
                         <th className="px-6 py-4 font-medium">ID (UID)</th>
                         <th className="px-6 py-4 font-medium">Jumlah Pesan</th>
-                        <th className="px-6 py-4 font-medium">
-                          Terakhir Aktif
-                        </th>
+                        <th className="px-6 py-4 font-medium">Terakhir Aktif</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-800">
                       {allUsersStats.map((u, i) => (
-                        <tr
-                          key={i}
-                          className="hover:bg-white/5 transition-colors"
-                        >
-                          <td className="px-6 py-4 font-medium text-gray-200">
-                            {u.name}
-                          </td>
-                          <td className="px-6 py-4 font-mono text-[11px] opacity-70">
-                            {u.uid}
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="bg-blue-500/10 text-blue-400 px-2.5 py-1 rounded-full text-xs font-bold border border-blue-500/20">
-                              {u.totalMessages || 0} Pesan
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-xs">
-                            {new Date(u.lastActive).toLocaleString("id-ID")}
-                          </td>
+                        <tr key={i} className="hover:bg-white/5 transition-colors">
+                          <td className="px-6 py-4 font-medium text-gray-200">{u.name}</td>
+                          <td className="px-6 py-4 font-mono text-[11px] opacity-70">{u.uid}</td>
+                          <td className="px-6 py-4"><span className="bg-blue-500/10 text-blue-400 px-2.5 py-1 rounded-full text-xs font-bold border border-blue-500/20">{u.totalMessages || 0} Pesan</span></td>
+                          <td className="px-6 py-4 text-xs">{new Date(u.lastActive).toLocaleString("id-ID")}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -1153,44 +830,23 @@ export default function App() {
                 {messages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-center mt-6 md:mt-24 opacity-90 animate-fade-in px-2 w-full">
                     <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-2xl md:rounded-3xl flex items-center justify-center mb-4 md:mb-6 border border-blue-500/30 shadow-[0_0_50px_rgba(59,130,246,0.15)] relative">
-                      <Lucide.TerminalSquare
-                        size={20}
-                        className="text-blue-400 md:w-10 md:h-10 relative z-10"
-                      />
+                      <Lucide.TerminalSquare size={20} className="text-blue-400 md:w-10 md:h-10 relative z-10" />
                     </div>
                     <h2 className="text-2xl md:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 mb-2 md:mb-3 tracking-tight px-4">
-                      {!isRegistered
-                        ? "Selamat Datang di Kojet AI!"
-                        : `Hai ${userName}, Mau bahas apa nih bro?`}
+                      {!isRegistered ? "Selamat Datang di Kojet AI!" : `Hai ${userName}, Mau bahas apa nih bro?`}
                     </h2>
                     <p className="text-gray-400 max-w-[280px] md:max-w-md text-xs md:text-sm leading-relaxed mb-6 md:mb-8">
-                      {!isRegistered
-                        ? "Gue Kojet AI. Ketik nama panggilan lo di bawah ini dulu ya bro biar kita bisa mulai ngobrol!"
-                        : "Santai aja bro. Ketik aja mau ngobrol apa, bisa dibantu ngerjain macem-macem, upload file, atau generate gambar!"}
+                      {!isRegistered ? "Gue Kojet AI. Ketik nama panggilan lo di bawah ini dulu ya bro biar kita bisa mulai ngobrol!" : "Santai aja bro. Ketik aja mau ngobrol apa, bisa dibantu ngerjain macem-macem, upload file, atau generate gambar!"}
                     </p>
 
                     {isRegistered && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 w-full max-w-2xl text-left px-2">
-                        <button
-                          onClick={() =>
-                            setInput(
-                              "Bro, bantu buatin gue makalah 3 paragraf tentang Pengaruh AI dong.",
-                            )
-                          }
-                          className="p-3.5 md:p-4 rounded-xl md:rounded-2xl border border-white/5 bg-white/5 hover:bg-white/10 text-[13px] md:text-sm text-gray-300 transition-all hover:scale-[1.02] group"
-                        >
-                          <span className="flex items-center gap-2 text-blue-400 font-medium mb-1">
-                            <Lucide.FileText size={14} /> Bikin Esai / Makalah
-                          </span>
+                        <button onClick={() => setInput("Bro, bantu buatin gue makalah 3 paragraf tentang Pengaruh AI dong.")} className="p-3.5 md:p-4 rounded-xl md:rounded-2xl border border-white/5 bg-white/5 hover:bg-white/10 text-[13px] md:text-sm text-gray-300 transition-all hover:scale-[1.02] group">
+                          <span className="flex items-center gap-2 text-blue-400 font-medium mb-1"><Lucide.FileText size={14} /> Bikin Esai / Makalah</span>
                           "Bantu gue buatin makalah 3 paragraf tentang AI..."
                         </button>
-                        <button
-                          onClick={handleGenerateMode}
-                          className="p-3.5 md:p-4 rounded-xl md:rounded-2xl border border-white/5 bg-white/5 hover:bg-white/10 text-[13px] md:text-sm text-gray-300 transition-all hover:scale-[1.02] group"
-                        >
-                          <span className="flex items-center gap-2 text-purple-400 font-medium mb-1">
-                            <Lucide.ImagePlus size={14} /> Generate Foto
-                          </span>
+                        <button onClick={handleGenerateMode} className="p-3.5 md:p-4 rounded-xl md:rounded-2xl border border-white/5 bg-white/5 hover:bg-white/10 text-[13px] md:text-sm text-gray-300 transition-all hover:scale-[1.02] group">
+                          <span className="flex items-center gap-2 text-purple-400 font-medium mb-1"><Lucide.ImagePlus size={14} /> Generate Foto</span>
                           "Tolong buatkan foto dengan gaya..."
                         </button>
                       </div>
@@ -1198,120 +854,32 @@ export default function App() {
                   </div>
                 ) : (
                   messages.map((msg, index) => (
-                    <div
-                      key={index}
-                      className={`flex flex-col gap-2 ${msg.role === "user" ? "items-end" : "items-start"} w-full`}
-                    >
-                      <div
-                        className={`flex gap-3 md:gap-5 w-full ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}
-                      >
-                        <div
-                          className={`w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center shrink-0 shadow-lg mt-1 md:mt-0 ${msg.role === "user" ? "bg-gradient-to-br from-blue-600 to-indigo-600" : "bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700"}`}
-                        >
-                          {msg.role === "user" ? (
-                            <span className="text-[11px] md:text-sm font-bold text-white uppercase">
-                              {userName ? userName.substring(0, 2) : "ME"}
-                            </span>
-                          ) : (
-                            <Lucide.TerminalSquare
-                              size={16}
-                              className="text-blue-400 md:w-5 md:h-5"
-                            />
-                          )}
+                    <div key={index} className={`flex flex-col gap-2 ${msg.role === "user" ? "items-end" : "items-start"} w-full`}>
+                      <div className={`flex gap-3 md:gap-5 w-full ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
+                        <div className={`w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center shrink-0 shadow-lg mt-1 md:mt-0 ${msg.role === "user" ? "bg-gradient-to-br from-blue-600 to-indigo-600" : "bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700"}`}>
+                          {msg.role === "user" ? <span className="text-[11px] md:text-sm font-bold text-white uppercase">{userName ? userName.substring(0, 2) : "ME"}</span> : <Lucide.TerminalSquare size={16} className="text-blue-400 md:w-5 md:h-5" />}
                         </div>
-
-                        <div
-                          className={`max-w-[85%] rounded-2xl md:rounded-3xl px-4 py-3 md:px-6 md:py-4 shadow-xl overflow-hidden ${msg.role === "user" ? "bg-blue-600 text-white rounded-tr-sm" : "bg-[#181a25] border border-white/5 text-gray-100 rounded-tl-sm w-full"}`}
-                        >
+                        
+                        <div className={`max-w-[85%] rounded-2xl md:rounded-3xl px-4 py-3 md:px-6 md:py-4 shadow-xl overflow-hidden ${msg.role === "user" ? "bg-blue-600 text-white rounded-tr-sm" : "bg-[#181a25] border border-white/5 text-gray-100 rounded-tl-sm w-full"}`}>
                           {msg.attachments && msg.attachments.length > 0 && (
-                            <div className="flex flex-wrap gap-2 mb-3">
-                              {msg.attachments.map((att, i) =>
-                                !att.isDoc ? (
-                                  <img
-                                    key={i}
-                                    src={att.url}
-                                    alt="Uploaded"
-                                    className="w-20 h-20 md:w-24 md:h-24 object-cover rounded-xl border border-white/20 shadow-md"
-                                  />
-                                ) : (
-                                  <div
-                                    key={i}
-                                    className="flex items-center gap-2 bg-white/10 px-3 py-2 rounded-lg text-xs md:text-sm shadow-md border border-white/10"
-                                  >
-                                    <Lucide.FileText
-                                      size={16}
-                                      className="text-blue-300"
-                                    />
-                                    <span className="truncate max-w-[150px] font-medium">
-                                      {att.name}
-                                    </span>
-                                  </div>
-                                ),
-                              )}
-                            </div>
+                             <div className="flex flex-wrap gap-2 mb-3">
+                                {msg.attachments.map((att, i) => (
+                                   !att.isDoc ? <img key={i} src={att.url} alt="Uploaded" className="w-20 h-20 md:w-24 md:h-24 object-cover rounded-xl border border-white/20 shadow-md" /> :
+                                   <div key={i} className="flex items-center gap-2 bg-white/10 px-3 py-2 rounded-lg text-xs md:text-sm shadow-md border border-white/10"><Lucide.FileText size={16} className="text-blue-300"/><span className="truncate max-w-[150px] font-medium">{att.name}</span></div>
+                                ))}
+                             </div>
                           )}
-                          {msg.role === "user" ? (
-                            <p className="whitespace-pre-wrap break-words leading-relaxed text-[14px] md:text-[15px]">
-                              {msg.text.replace(/\[Mengirim Lampiran\]/g, "")}
-                            </p>
-                          ) : (
-                            <MessageFormatter text={msg.text} />
-                          )}
+                          {msg.role === "user" ? <p className="whitespace-pre-wrap break-words leading-relaxed text-[14px] md:text-[15px]">{msg.text.replace(/\[Mengirim Lampiran\]/g, '')}</p> : <MessageFormatter text={msg.text} />}
                         </div>
                       </div>
-
+                      
                       {msg.role === "model" && (
                         <div className="flex flex-wrap gap-2 ml-11 md:ml-16 mt-1 mb-2">
-                          <button
-                            onClick={() => handleToggleSpeech(msg.text, index)}
-                            className="flex items-center gap-1.5 text-[10px] md:text-[11px] font-medium bg-green-600/20 text-green-400 hover:bg-green-600/40 px-2.5 py-1.5 md:px-3 md:py-1.5 rounded-lg transition-colors border border-green-500/20 w-[85px] justify-center"
-                          >
-                            {speakingIndex === index && !isPaused ? (
-                              <>
-                                <Lucide.Pause
-                                  size={12}
-                                  className="md:w-3.5 md:h-3.5"
-                                />{" "}
-                                Pause
-                              </>
-                            ) : speakingIndex === index && isPaused ? (
-                              <>
-                                <Lucide.Play
-                                  size={12}
-                                  className="md:w-3.5 md:h-3.5"
-                                />{" "}
-                                Lanjut
-                              </>
-                            ) : (
-                              <>
-                                <Lucide.Volume2
-                                  size={12}
-                                  className="md:w-3.5 md:h-3.5"
-                                />{" "}
-                                Bacakan
-                              </>
-                            )}
+                          <button onClick={() => handleToggleSpeech(msg.text, index)} className="flex items-center gap-1.5 text-[10px] md:text-[11px] font-medium bg-green-600/20 text-green-400 hover:bg-green-600/40 px-2.5 py-1.5 md:px-3 md:py-1.5 rounded-lg transition-colors border border-green-500/20 w-[85px] justify-center">
+                            {speakingIndex === index && !isPaused ? <><Lucide.Pause size={12} className="md:w-3.5 md:h-3.5" /> Pause</> : speakingIndex === index && isPaused ? <><Lucide.Play size={12} className="md:w-3.5 md:h-3.5" /> Lanjut</> : <><Lucide.Volume2 size={12} className="md:w-3.5 md:h-3.5" /> Bacakan</>}
                           </button>
-                          <button
-                            onClick={() => exportToWord(msg.text)}
-                            className="flex items-center gap-1.5 text-[10px] md:text-[11px] font-medium bg-blue-600/20 text-blue-400 hover:bg-blue-600/40 px-2.5 py-1.5 md:px-3 md:py-1.5 rounded-lg transition-colors border border-blue-500/20"
-                          >
-                            <Lucide.FileText
-                              size={12}
-                              className="md:w-3.5 md:h-3.5"
-                            />{" "}
-                            Word
-                          </button>
-                          <button
-                            onClick={() => exportToPDF(msg.text)}
-                            className="flex items-center gap-1.5 text-[10px] md:text-[11px] font-medium bg-red-600/20 text-red-400 hover:bg-red-600/40 px-2.5 py-1.5 md:px-3 md:py-1.5 rounded-lg transition-colors border border-red-500/20"
-                          >
-                            <Lucide.Printer
-                              size={12}
-                              className="md:w-3.5 md:h-3.5"
-                            />{" "}
-                            PDF
-                          </button>
+                          <button onClick={() => exportToWord(msg.text)} className="flex items-center gap-1.5 text-[10px] md:text-[11px] font-medium bg-blue-600/20 text-blue-400 hover:bg-blue-600/40 px-2.5 py-1.5 md:px-3 md:py-1.5 rounded-lg transition-colors border border-blue-500/20"><Lucide.FileText size={12} className="md:w-3.5 md:h-3.5" /> Word</button>
+                          <button onClick={() => exportToPDF(msg.text)} className="flex items-center gap-1.5 text-[10px] md:text-[11px] font-medium bg-red-600/20 text-red-400 hover:bg-red-600/40 px-2.5 py-1.5 md:px-3 md:py-1.5 rounded-lg transition-colors border border-red-500/20"><Lucide.Printer size={12} className="md:w-3.5 md:h-3.5" /> PDF</button>
                         </div>
                       )}
                     </div>
@@ -1319,32 +887,10 @@ export default function App() {
                 )}
                 {isLoading && (
                   <div className="flex gap-3 md:gap-5 w-full">
-                    <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700 flex items-center justify-center shrink-0">
-                      <Lucide.TerminalSquare
-                        size={16}
-                        className="text-blue-400 md:w-5 md:h-5"
-                      />
-                    </div>
+                    <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700 flex items-center justify-center shrink-0"><Lucide.TerminalSquare size={16} className="text-blue-400 md:w-5 md:h-5" /></div>
                     <div className="bg-[#181a25] border border-white/5 rounded-2xl md:rounded-3xl rounded-tl-sm px-5 py-3 md:px-6 md:py-4 flex items-center gap-3">
-                      <div className="flex gap-1.5">
-                        <div
-                          className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-blue-500 animate-bounce"
-                          style={{ animationDelay: "0ms" }}
-                        ></div>
-                        <div
-                          className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-indigo-500 animate-bounce"
-                          style={{ animationDelay: "150ms" }}
-                        ></div>
-                        <div
-                          className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-purple-500 animate-bounce"
-                          style={{ animationDelay: "300ms" }}
-                        ></div>
-                      </div>
-                      <span className="text-[13px] md:text-sm font-medium bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400 animate-pulse">
-                        {!isRegistered
-                          ? "Kojet AI lagi nyiapin obrolan lo..."
-                          : "Kojet AI lagi ngetik..."}
-                      </span>
+                      <div className="flex gap-1.5"><div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: "0ms" }}></div><div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-indigo-500 animate-bounce" style={{ animationDelay: "150ms" }}></div><div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-purple-500 animate-bounce" style={{ animationDelay: "300ms" }}></div></div>
+                      <span className="text-[13px] md:text-sm font-medium bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400 animate-pulse">{!isRegistered ? "Kojet AI lagi nyiapin obrolan lo..." : "Kojet AI lagi ngetik..."}</span>
                     </div>
                   </div>
                 )}
@@ -1358,150 +904,33 @@ export default function App() {
                 {imageAttachments.length > 0 && (
                   <div className="flex flex-wrap gap-2 md:gap-3 mb-2 md:mb-3 p-2 md:p-3 bg-white/5 backdrop-blur-md rounded-xl md:rounded-2xl border border-white/5">
                     {imageAttachments.map((img, idx) => (
-                      <div
-                        key={idx}
-                        className="relative group w-12 h-12 md:w-16 md:h-16 rounded-lg md:rounded-xl border border-gray-600 overflow-hidden shadow-lg flex items-center justify-center bg-gray-800"
-                      >
-                        {!img.isDoc ? (
-                          <img
-                            src={img.url}
-                            alt="attachment"
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <Lucide.FileText
-                            size={24}
-                            className="text-blue-400"
-                          />
-                        )}
-                        <button
-                          onClick={() => removeAttachment(idx)}
-                          className="absolute inset-0 bg-red-500/80 md:opacity-0 md:group-hover:opacity-100 flex items-center justify-center transition-all opacity-100 sm:opacity-0"
-                        >
-                          <Lucide.Trash2
-                            size={16}
-                            className="text-white md:w-5 md:h-5"
-                          />
-                        </button>
+                      <div key={idx} className="relative group w-12 h-12 md:w-16 md:h-16 rounded-lg md:rounded-xl border border-gray-600 overflow-hidden shadow-lg flex items-center justify-center bg-gray-800">
+                        {!img.isDoc ? <img src={img.url} alt="attachment" className="w-full h-full object-cover" /> : <Lucide.FileText size={24} className="text-blue-400"/>}
+                        <button onClick={() => removeAttachment(idx)} className="absolute inset-0 bg-red-500/80 md:opacity-0 md:group-hover:opacity-100 flex items-center justify-center transition-all opacity-100 sm:opacity-0"><Lucide.Trash2 size={16} className="text-white md:w-5 md:h-5" /></button>
                       </div>
                     ))}
                   </div>
                 )}
 
-                <form
-                  onSubmit={handleSendMessage}
-                  className="relative flex items-end gap-1.5 md:gap-2 bg-[#161925] p-1.5 md:p-2 rounded-2xl md:rounded-3xl border border-gray-700/50 shadow-xl md:shadow-2xl md:shadow-black/50 focus-within:border-blue-500/50 focus-within:ring-2 md:focus-within:ring-4 focus-within:ring-blue-500/10 transition-all w-full"
-                >
-                  <input
-                    type="file"
-                    multiple
-                    ref={fileInputRef}
-                    onChange={handleFileChange}
-                    className="hidden"
-                    accept=".txt,.js,.html,.css,.py,.doc,.docx,.pdf,image/*"
-                  />
-
+                <form onSubmit={handleSendMessage} className="relative flex items-end gap-1.5 md:gap-2 bg-[#161925] p-1.5 md:p-2 rounded-2xl md:rounded-3xl border border-gray-700/50 shadow-xl md:shadow-2xl md:shadow-black/50 focus-within:border-blue-500/50 focus-within:ring-2 md:focus-within:ring-4 focus-within:ring-blue-500/10 transition-all w-full">
+                  <input type="file" multiple ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".txt,.js,.html,.css,.py,.doc,.docx,.pdf,image/*" />
+                  
                   <div className="relative">
-                    <button
-                      type="button"
-                      disabled={!isRegistered}
-                      onClick={() => setShowAttachMenu(!showAttachMenu)}
-                      className={`p-2.5 md:p-3.5 rounded-full transition-colors shrink-0 ${!isRegistered ? "text-gray-600 opacity-50 cursor-not-allowed" : "text-gray-400 hover:text-white hover:bg-white/10"}`}
-                      title="Upload Menu"
-                    >
-                      <Lucide.Paperclip size={20} className="md:w-5 md:h-5" />
-                    </button>
+                    <button type="button" disabled={!isRegistered} onClick={() => setShowAttachMenu(!showAttachMenu)} className={`p-2.5 md:p-3.5 rounded-full transition-colors shrink-0 ${!isRegistered ? "text-gray-600 opacity-50 cursor-not-allowed" : "text-gray-400 hover:text-white hover:bg-white/10"}`} title="Upload Menu"><Lucide.Paperclip size={20} className="md:w-5 md:h-5" /></button>
                     {showAttachMenu && isRegistered && (
-                      <>
-                        <div
-                          className="fixed inset-0 z-40"
-                          onClick={() => setShowAttachMenu(false)}
-                        ></div>
-                        <div className="absolute bottom-full left-0 mb-2 w-56 bg-[#1e1e2e] border border-gray-700 rounded-xl shadow-2xl p-1.5 z-50 flex flex-col gap-1 animate-fade-in">
-                          <button
-                            type="button"
-                            onClick={() => fileInputRef.current?.click()}
-                            className="flex items-center gap-3 w-full text-left p-2.5 hover:bg-white/10 rounded-lg text-sm text-gray-200 transition-colors"
-                          >
-                            <Lucide.FileUp
-                              size={16}
-                              className="text-blue-400"
-                            />{" "}
-                            Upload Foto/Dokumen
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleGenerateMode}
-                            className="flex items-center gap-3 w-full text-left p-2.5 hover:bg-white/10 rounded-lg text-sm text-gray-200 transition-colors"
-                          >
-                            <Lucide.ImagePlus
-                              size={16}
-                              className="text-purple-400"
-                            />{" "}
-                            Generate Foto AI
-                          </button>
-                        </div>
-                      </>
+                      <><div className="fixed inset-0 z-40" onClick={() => setShowAttachMenu(false)}></div><div className="absolute bottom-full left-0 mb-2 w-56 bg-[#1e1e2e] border border-gray-700 rounded-xl shadow-2xl p-1.5 z-50 flex flex-col gap-1 animate-fade-in"><button type="button" onClick={() => fileInputRef.current?.click()} className="flex items-center gap-3 w-full text-left p-2.5 hover:bg-white/10 rounded-lg text-sm text-gray-200 transition-colors"><Lucide.FileUp size={16} className="text-blue-400" /> Upload Foto/Dokumen</button><button type="button" onClick={handleGenerateMode} className="flex items-center gap-3 w-full text-left p-2.5 hover:bg-white/10 rounded-lg text-sm text-gray-200 transition-colors"><Lucide.ImagePlus size={16} className="text-purple-400" /> Generate Foto AI</button></div></>
                     )}
                   </div>
 
                   <div className="flex-1 relative w-full">
-                    <textarea
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (
-                          e.key === "Enter" &&
-                          !e.shiftKey &&
-                          window.innerWidth > 768
-                        ) {
-                          e.preventDefault();
-                          handleSendMessage(e);
-                        }
-                      }}
-                      placeholder={
-                        !isRegistered
-                          ? "Ketik nama panggilan lo buat mulai..."
-                          : isListening
-                            ? "Ngomong aja bro..."
-                            : "Ketik pesan lo di sini..."
-                      }
-                      className={`w-full bg-transparent text-gray-100 placeholder-gray-500 md:placeholder-gray-600 rounded-xl md:rounded-2xl px-1 md:px-2 py-3 md:py-3.5 focus:outline-none resize-none min-h-[44px] md:min-h-[52px] max-h-[120px] md:max-h-[200px] custom-scrollbar block text-[14px] md:text-[15px] ${isListening ? "animate-pulse text-blue-400 placeholder-blue-500" : ""}`}
-                      rows={Math.min(4, (input.match(/\n/g) || []).length + 1)}
-                    />
+                    <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && window.innerWidth > 768) { e.preventDefault(); handleSendMessage(e); } }} placeholder={!isRegistered ? "Ketik nama panggilan lo buat mulai..." : isListening ? "Ngomong aja bro..." : "Ketik pesan lo di sini..."} className={`w-full bg-transparent text-gray-100 placeholder-gray-500 md:placeholder-gray-600 rounded-xl md:rounded-2xl px-1 md:px-2 py-3 md:py-3.5 focus:outline-none resize-none min-h-[44px] md:min-h-[52px] max-h-[120px] md:max-h-[200px] custom-scrollbar block text-[14px] md:text-[15px] ${isListening ? "animate-pulse text-blue-400 placeholder-blue-500" : ""}`} rows={Math.min(4, (input.match(/\n/g) || []).length + 1)} />
                   </div>
 
-                  <button
-                    type="button"
-                    disabled={!isRegistered}
-                    onClick={toggleListening}
-                    className={`p-2.5 md:p-3.5 rounded-full transition-all duration-300 shrink-0 ${!isRegistered ? "text-gray-600 opacity-50 cursor-not-allowed" : isListening ? "bg-red-500/20 text-red-500 hover:bg-red-500/30 animate-pulse" : "text-gray-400 hover:text-white hover:bg-white/10"}`}
-                    title="Dikte Suara"
-                  >
-                    {isListening ? (
-                      <Lucide.MicOff size={18} className="md:w-5 md:h-5" />
-                    ) : (
-                      <Lucide.Mic size={20} className="md:w-5 md:h-5" />
-                    )}
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={
-                      (!input.trim() && imageAttachments.length === 0) ||
-                      isLoading
-                    }
-                    className="p-2.5 md:p-3.5 mr-0.5 md:mr-1 mb-0.5 md:mb-1 rounded-full md:rounded-[1.2rem] bg-blue-600 text-white hover:bg-blue-500 disabled:bg-gray-800 disabled:text-gray-600 transition-all shadow-lg disabled:shadow-none shrink-0 active:scale-95"
-                  >
-                    <Lucide.Send
-                      size={20}
-                      className={`md:w-5 md:h-5 ${input.trim() || imageAttachments.length > 0 ? "translate-x-0.5 -translate-y-0.5 md:translate-x-1 md:-translate-y-1" : ""}`}
-                    />
-                  </button>
+                  <button type="button" disabled={!isRegistered} onClick={toggleListening} className={`p-2.5 md:p-3.5 rounded-full transition-all duration-300 shrink-0 ${!isRegistered ? "text-gray-600 opacity-50 cursor-not-allowed" : isListening ? "bg-red-500/20 text-red-500 hover:bg-red-500/30 animate-pulse" : "text-gray-400 hover:text-white hover:bg-white/10"}`} title="Dikte Suara">{isListening ? <Lucide.MicOff size={18} className="md:w-5 md:h-5" /> : <Lucide.Mic size={20} className="md:w-5 md:h-5" />}</button>
+                  <button type="submit" disabled={(!input.trim() && imageAttachments.length === 0) || isLoading} className="p-2.5 md:p-3.5 mr-0.5 md:mr-1 mb-0.5 md:mb-1 rounded-full md:rounded-[1.2rem] bg-blue-600 text-white hover:bg-blue-500 disabled:bg-gray-800 disabled:text-gray-600 transition-all shadow-lg disabled:shadow-none shrink-0 active:scale-95"><Lucide.Send size={20} className={`md:w-5 md:h-5 ${input.trim() || imageAttachments.length > 0 ? "translate-x-0.5 -translate-y-0.5 md:translate-x-1 md:-translate-y-1" : ""}`} /></button>
                 </form>
                 <div className="text-center mt-2 md:mt-3 hidden md:block">
-                  <span className="text-[10px] md:text-[11px] font-medium text-gray-500 bg-[#161925] px-3 py-1 rounded-full border border-gray-800/50">
-                    Kojet AI v1.1 ✨ Partner AI Terbaik
-                  </span>
+                  <span className="text-[10px] md:text-[11px] font-medium text-gray-500 bg-[#161925] px-3 py-1 rounded-full border border-gray-800/50">Kojet AI v1.1.1 ✨ Partner Chat Cerdas Mahasiswa</span>
                 </div>
               </div>
             </div>
@@ -1509,11 +938,7 @@ export default function App() {
         )}
       </main>
 
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `.custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; } @media (min-width: 768px) { .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; } } .custom-scrollbar::-webkit-scrollbar-track { background: transparent; } .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; } .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); } @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } } .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }`,
-        }}
-      />
+      <style dangerouslySetInnerHTML={{ __html: `.custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; } @media (min-width: 768px) { .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; } } .custom-scrollbar::-webkit-scrollbar-track { background: transparent; } .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; } .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); } @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } } .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }` }} />
     </div>
   );
 }
