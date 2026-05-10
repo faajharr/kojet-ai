@@ -14,7 +14,10 @@ export default async function handler(req, res) {
     process.env.GOOGLE_AI_KEY;
 
     if (!apiKey) {
-      return res.status(500).json({ error: "API Key belum dipasang." });
+      return new Response(JSON.stringify({ error: 'API Key Vercel belum dipasang' }), { 
+        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
     }
 
     // Menggunakan model Gemini 3.1 Flash Lite sesuai request lo!
