@@ -279,7 +279,7 @@ export default function App() {
     return () => unsubProfile();
   }, [user, activeUid]);
 
-  // Listener Riwayat Chat - BUG CHAT BARU FIXED
+  // Listener Riwayat Chat
   useEffect(() => {
     if (!activeUid) return;
 
@@ -327,7 +327,6 @@ export default function App() {
           "Admin dashboard butuh Firebase Rules tambahan untuk baca user_profiles global",
           e,
         );
-        // Alert dimatikan agar tidak mengganggu jika Firebase Rules belum diatur dengan benar.
       }
     };
     fetchAdminStats();
@@ -377,14 +376,12 @@ export default function App() {
     }
   };
 
-  // --- SOLUSI AMPUH: REGISTRASI NAMA INSTAN & TAMPIL HALAMAN UTAMA ---
   const handleRegisterName = (nameInput) => {
     let currentUser = user || auth.currentUser;
     if (!currentUser) return;
 
     let targetUid = currentUser.uid;
 
-    // 1. UPDATE TAMPILAN SECARA INSTAN (Tanpa Loading State)
     setActiveUid(targetUid);
     setUserName(nameInput);
     setIsRegistered(true);
@@ -392,14 +389,11 @@ export default function App() {
     localStorage.setItem("kojet_active_uid", targetUid);
     localStorage.setItem("kojet_user_name", nameInput);
 
-    // KOSONGKAN ARRAY PESAN AGAR HALAMAN UTAMA "HAI USER" LANGSUNG MUNCUL
     setMessages([]);
 
-    // Pastikan ID chat baru disiapkan
     const newChatId = generateId();
     setCurrentChatId(newChatId);
 
-    // 2. SIMPAN DATA KE FIREBASE SECARA DIAM-DIAM DI BACKGROUND
     setDoc(
       doc(db, "artifacts", appId, "user_profiles", targetUid),
       {
@@ -590,6 +584,7 @@ export default function App() {
     recognition.start();
   };
 
+  // --- KODE BARU: PEMBACA FILE DOCX MENGGUNAKAN MAMMOTH.JS ---
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
@@ -610,7 +605,7 @@ export default function App() {
           ]);
         reader.readAsDataURL(file);
       }
-      // 2. PDF Asli (Bisa dikirim langsung ke Gemini 1.5 via Base64)
+      // 2. PDF Asli (Bisa dikirim langsung ke Gemini via Base64)
       else if (file.type === "application/pdf") {
         reader.onload = (event) =>
           setImageAttachments((prev) => [
@@ -625,7 +620,41 @@ export default function App() {
           ]);
         reader.readAsDataURL(file);
       }
-      // 3. Teks Murni (.txt, .js, .py, .html, dll)
+      // 3. File Word (.docx) - Dibongkar Otomatis pakai Mammoth
+      else if (file.name.match(/\.docx$/i)) {
+        reader.onload = async (event) => {
+          if (!window.mammoth) {
+            alert(
+              "Alat pembaca file Word sedang disiapkan sistem, coba refresh halaman.",
+            );
+            return;
+          }
+          try {
+            const arrayBuffer = event.target.result;
+            // Mengubah ZIP/XML docx menjadi teks murni yang bisa dibaca AI
+            const result = await window.mammoth.extractRawText({ arrayBuffer });
+            setImageAttachments((prev) => [
+              ...prev,
+              {
+                name: file.name,
+                mimeType: "text/plain",
+                data: "",
+                url: "",
+                isDoc: true,
+                textData: result.value,
+              },
+            ]);
+          } catch (err) {
+            console.error("Gagal membaca DOCX:", err);
+            alert(
+              `Gagal membaca file ${file.name}. Pastikan file tidak rusak atau terkunci password.`,
+            );
+          }
+        };
+        // Penting: docx wajib dibaca sebagai ArrayBuffer
+        reader.readAsArrayBuffer(file);
+      }
+      // 4. Teks Murni (.txt, .js, .py, .html, dll)
       else if (
         file.type.startsWith("text/") ||
         file.name.match(/\.(txt|js|py|html|css|json|md|csv)$/i)
@@ -645,10 +674,10 @@ export default function App() {
         };
         reader.readAsText(file);
       }
-      // 4. Word (.docx), Excel, ZIP (Format Biner yang menyebabkan text Alien "PK")
+      // 5. File lain-lain (Excel, PPT, dll)
       else {
         alert(
-          `Bro, format file ${file.name} belum bisa dibaca mentah-mentah nih. Tolong save as / convert ke PDF dulu ya biar Kojet AI bisa baca!`,
+          `Bro, format file ${file.name} belum bisa dibaca. Tolong convert ke PDF atau copy-paste aja isinya!`,
         );
       }
     });
@@ -713,7 +742,6 @@ export default function App() {
     if ((!currentInput && imageAttachments.length === 0) || isLoading) return;
 
     if (!isRegistered) {
-      // Panggil fungsi secara instan tanpa perlu ditunggu (await)
       handleRegisterName(currentInput);
       setInput("");
       return;
@@ -737,7 +765,7 @@ export default function App() {
     setMessages(newMessages);
     setInput("");
     setImageAttachments([]);
-    setIsLoading(true); // Loading AI chat normal
+    setIsLoading(true);
 
     if ("speechSynthesis" in window) {
       window.speechSynthesis.cancel();
@@ -776,7 +804,6 @@ export default function App() {
     setShowAttachMenu(false);
   };
 
-  // FUNGSI CHAT BARU
   const createNewChat = () => {
     if (!isRegistered)
       return alert("Isi nama lo di chat dulu ya bro sebelum bikin chat baru!");
@@ -788,7 +815,7 @@ export default function App() {
 
     const newId = generateId();
     setCurrentChatId(newId);
-    setMessages([]); // Kosongkan layar secara instan
+    setMessages([]);
     setImageAttachments([]);
     setIsSidebarOpen(false);
   };
@@ -902,13 +929,15 @@ export default function App() {
                 v1.1.2
               </span>
               <span className="leading-tight">
-                Dukungan asli untuk upload PDF & Penolakan DOCX cerdas.
+                Dukungan baca file Word (DOCX) otomatis tanpa alien code.
                 (10-05-2026)
               </span>
             </li>
             <li className="flex gap-2 items-start opacity-60">
-              <span className="font-bold">v1.1</span>
-              <span>Menu upload, render matematika instan. (10-05-2026)</span>
+              <span className="font-bold">v1.1.1</span>
+              <span>
+                Perbaikan bug loading instan & fix riwayat sidebar. (10-05-2026)
+              </span>
             </li>
           </ul>
         </div>
@@ -1104,7 +1133,7 @@ export default function App() {
                     <p className="text-gray-400 max-w-[280px] md:max-w-md text-xs md:text-sm leading-relaxed mb-6 md:mb-8">
                       {!isRegistered
                         ? "Gue Kojet AI. Ketik nama panggilan lo di bawah ini dulu ya bro biar kita bisa mulai ngobrol!"
-                        : "Santai aja bro. Ketik aja mau ngobrol apa, bisa dibantu ngerjain macem-macem, upload file, atau generate gambar!"}
+                        : "Santai aja bro. Ketik aja mau ngobrol apa, bisa dibantu ngerjain macem-macem, upload file DOCX/PDF, atau generate gambar!"}
                     </p>
 
                     {isRegistered && (
