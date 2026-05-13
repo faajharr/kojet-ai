@@ -20,7 +20,7 @@ import * as Lucide from "lucide-react";
 const ADMIN_SECRET_COMMAND = "/admin-faajharr";
 
 // --- Firebase Initialization ---
-// Menggunakan trik pemisahan string (concatenation) agar tidak terdeteksi oleh 
+// Menggunakan trik pemisahan string (concatenation) agar tidak terdeteksi oleh
 // robot scanner Google di GitHub, dan tetap aman tanpa memicu error di Vite.
 const firebaseConfig = {
   apiKey: "AIzaSyDIN1hm-" + "OrQFoiu8mZF_" + "5nGxkwLf7v2Hjw",
@@ -593,6 +593,9 @@ export default function App() {
     files.forEach((file) => {
       const reader = new FileReader();
 
+      // Pastikan ada window.mammoth terload dari index.html. Jika tidak ada, jangan bongkar file docx
+      const hasMammoth = typeof window !== "undefined" && !!window.mammoth;
+
       if (file.type.startsWith("image/")) {
         reader.onload = (event) =>
           setImageAttachments((prev) => [
@@ -619,35 +622,39 @@ export default function App() {
           ]);
         reader.readAsDataURL(file);
       } else if (file.name.match(/\.docx$/i)) {
-        reader.onload = async (event) => {
-          if (!window.mammoth) {
-            alert(
-              "Alat pembaca file Word sedang disiapkan sistem, coba refresh halaman.",
-            );
-            return;
-          }
-          try {
-            const arrayBuffer = event.target.result;
-            const result = await window.mammoth.extractRawText({ arrayBuffer });
-            setImageAttachments((prev) => [
-              ...prev,
-              {
-                name: file.name,
-                mimeType: "text/plain",
-                data: "",
-                url: "",
-                isDoc: true,
-                textData: result.value,
-              },
-            ]);
-          } catch (err) {
-            console.error("Gagal membaca DOCX:", err);
-            alert(
-              `Gagal membaca file ${file.name}. Pastikan file tidak rusak atau terkunci password.`,
-            );
-          }
-        };
-        reader.readAsArrayBuffer(file);
+        // Jika file adalah docx dan window.mammoth ADA (dari index.html)
+        if (hasMammoth) {
+          reader.onload = async (event) => {
+            try {
+              const arrayBuffer = event.target.result;
+              const result = await window.mammoth.extractRawText({
+                arrayBuffer,
+              });
+              setImageAttachments((prev) => [
+                ...prev,
+                {
+                  name: file.name,
+                  mimeType: "text/plain",
+                  data: "",
+                  url: "",
+                  isDoc: true,
+                  textData: result.value,
+                },
+              ]);
+            } catch (err) {
+              console.error("Gagal membaca DOCX:", err);
+              alert(
+                `Gagal membaca file ${file.name}. Pastikan file tidak rusak atau terkunci password.`,
+              );
+            }
+          };
+          reader.readAsArrayBuffer(file);
+        } else {
+          // Jika script mammoth belum jalan/ada, tampilkan alert saja.
+          alert(
+            "Alat pembaca Word sedang disiapkan. Silakan coba lagi sebentar, atau convert ke PDF dulu ya bro!",
+          );
+        }
       } else if (
         file.type.startsWith("text/") ||
         file.name.match(/\.(txt|js|py|html|css|json|md|csv)$/i)
@@ -1139,11 +1146,7 @@ export default function App() {
                     {isRegistered && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 w-full max-w-2xl text-left px-2">
                         <button
-                          onClick={() =>
-                            setInput(
-                              "Apa itu kojet ai",
-                            )
-                          }
+                          onClick={() => setInput("Apa itu kojet ai")}
                           className="p-3.5 md:p-4 rounded-xl md:rounded-2xl border border-white/5 bg-white/5 hover:bg-white/10 text-[13px] md:text-sm text-gray-300 transition-all hover:scale-[1.02] group"
                         >
                           <span className="flex items-center gap-2 text-blue-400 font-medium mb-1">
