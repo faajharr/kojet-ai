@@ -20,8 +20,6 @@ import * as Lucide from "lucide-react";
 const ADMIN_SECRET_COMMAND = "/admin-faajharr";
 
 // --- Firebase Initialization ---
-// Menggunakan trik pemisahan string (concatenation) agar tidak terdeteksi oleh
-// robot scanner Google di GitHub, dan tetap aman tanpa memicu error di Vite.
 const firebaseConfig = {
   apiKey: "AIzaSyDIN1hm-" + "OrQFoiu8mZF_" + "5nGxkwLf7v2Hjw",
   authDomain: "kojet-ai.firebaseapp.com",
@@ -128,7 +126,7 @@ const CodeBlock = ({ code, lang }) => {
   );
 };
 
-// --- Format Pesan (Diperbarui untuk Handle Rumus MTK/LaTeX) ---
+// --- Format Pesan ---
 const MessageFormatter = ({ text }) => {
   const blocks = text.split(/(```[\w]*\n[\s\S]*?```)/g);
   const formatText = (content) => {
@@ -186,7 +184,12 @@ export default function App() {
   const [isRegistered, setIsRegistered] = useState(
     localStorage.getItem("kojet_active_uid") ? true : false,
   );
-  const [viewMode, setViewMode] = useState("chat");
+
+  // --- SOLUSI ANTI REFRESH (State Persistence) ---
+  // Kita simpan status halaman ke dalam LocalStorage, jadi browser bakal hafal halaman terakhir yang dibuka.
+  const [viewMode, setViewMode] = useState(() => {
+    return localStorage.getItem("kojet_view_mode") || "landing";
+  });
 
   const [messages, setMessages] = useState(() => {
     try {
@@ -219,6 +222,11 @@ export default function App() {
 
   const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
+
+  // Setiap kali halaman berubah (landing/chat/admin), simpan ke browser memori!
+  useEffect(() => {
+    localStorage.setItem("kojet_view_mode", viewMode);
+  }, [viewMode]);
 
   useEffect(() => {
     localStorage.setItem("kojet_current_chat_id", currentChatId);
@@ -257,7 +265,6 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // Sync Data User secara real-time dari Firestore
   useEffect(() => {
     if (!user) return;
     const targetUid = activeUid || user.uid;
@@ -282,7 +289,6 @@ export default function App() {
     return () => unsubProfile();
   }, [user, activeUid]);
 
-  // Listener Riwayat Chat
   useEffect(() => {
     if (!activeUid) return;
 
@@ -314,7 +320,6 @@ export default function App() {
     return () => unsubSettings();
   }, []);
 
-  // Listener Admin Dashboard
   useEffect(() => {
     if (viewMode !== "admin_dashboard") return;
     const fetchAdminStats = async () => {
@@ -421,6 +426,7 @@ export default function App() {
       localStorage.removeItem("kojet_user_name");
       localStorage.removeItem("kojet_messages_cache");
       localStorage.removeItem("kojet_current_chat_id");
+      localStorage.removeItem("kojet_view_mode");
 
       setActiveUid(null);
       setUserName("");
@@ -428,6 +434,7 @@ export default function App() {
       setMessages([]);
       setConversations([]);
       setCurrentChatId(generateId());
+      setViewMode("landing");
     }
   };
 
@@ -593,7 +600,6 @@ export default function App() {
     files.forEach((file) => {
       const reader = new FileReader();
 
-      // Pastikan ada window.mammoth terload dari index.html. Jika tidak ada, jangan bongkar file docx
       const hasMammoth = typeof window !== "undefined" && !!window.mammoth;
 
       if (file.type.startsWith("image/")) {
@@ -622,7 +628,6 @@ export default function App() {
           ]);
         reader.readAsDataURL(file);
       } else if (file.name.match(/\.docx$/i)) {
-        // Jika file adalah docx dan window.mammoth ADA (dari index.html)
         if (hasMammoth) {
           reader.onload = async (event) => {
             try {
@@ -650,10 +655,7 @@ export default function App() {
           };
           reader.readAsArrayBuffer(file);
         } else {
-          // Jika script mammoth belum jalan/ada, tampilkan alert saja.
-          alert(
-            "Alat pembaca Word sedang disiapkan. Silakan coba lagi sebentar, atau convert ke PDF dulu ya bro!",
-          );
+           alert("Alat pembaca Word sedang disiapkan. Silakan coba lagi sebentar, atau convert ke PDF dulu ya bro!");
         }
       } else if (
         file.type.startsWith("text/") ||
@@ -831,6 +833,95 @@ export default function App() {
     }
   };
 
+  // --- HALAMAN LANDING PAGE ---
+  if (viewMode === "landing") {
+    return (
+      <div className="min-h-screen bg-[#0f111a] text-white font-sans overflow-x-hidden selection:bg-blue-500/30 flex flex-col">
+        <nav className="fixed top-0 w-full z-50 bg-[#0f111a]/80 backdrop-blur-lg border-b border-white/5">
+          <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <img src="/logo.png" alt="Kojet AI" className="w-8 h-8 rounded-lg" onError={(e) => e.target.style.display = 'none'} />
+              <span className="font-bold text-lg tracking-wide">Kojet<span className="text-blue-400">AI</span></span>
+            </div>
+            <button 
+              onClick={() => setViewMode("chat")} 
+              className="text-sm font-bold bg-white/10 hover:bg-white/20 px-5 py-2 rounded-full transition-all"
+            >
+              Masuk Chat
+            </button>
+          </div>
+        </nav>
+
+        <div className="relative flex-1 flex flex-col items-center justify-center text-center pt-32 pb-20 px-6">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] md:w-[600px] h-[300px] md:h-[600px] bg-blue-600/20 blur-[100px] md:blur-[120px] rounded-full pointer-events-none"></div>
+
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs md:text-sm font-medium mb-6 md:mb-8 animate-fade-in">
+            <Lucide.Sparkles size={16} /> Kecerdasan Buatan Terdepan
+          </div>
+
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold tracking-tight mb-4 md:mb-6 max-w-4xl relative z-10 leading-tight">
+            Asisten AI <br className="hidden md:block"/> <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400">Paling Cerdas & Asik</span>
+          </h1>
+
+          <p className="text-gray-400 text-sm md:text-xl max-w-2xl mb-8 md:mb-10 relative z-10 leading-relaxed">
+            Kojet AI siap membantu kamu memecahkan masalah koding, membaca isi dokumen PDF/Word, membuat gambar, hingga menjawab segala pertanyaanmu secara otomatis dalam hitungan detik.
+          </p>
+
+          <button 
+            onClick={() => setViewMode("chat")} 
+            className="group relative inline-flex items-center justify-center gap-3 bg-blue-600 text-white px-8 py-4 md:px-10 md:py-5 rounded-full text-base md:text-lg font-bold transition-all hover:bg-blue-500 hover:scale-105 shadow-[0_0_30px_rgba(59,130,246,0.3)] hover:shadow-[0_0_50px_rgba(59,130,246,0.5)] z-10"
+          >
+            Mulai Sekarang <Lucide.ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+          </button>
+        </div>
+
+        <div className="max-w-7xl mx-auto px-6 py-16 md:py-24 border-t border-white/5 relative z-10 w-full">
+          <div className="text-left md:text-center mb-10 md:mb-16">
+            <h2 className="text-3xl md:text-5xl font-bold mb-4 tracking-tight">Fitur <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500">Utama</span></h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+            <div className="bg-[#12141c]/80 backdrop-blur-md p-6 md:p-8 rounded-3xl border border-white/5 hover:border-blue-500/30 transition-all flex flex-col sm:flex-row md:flex-col gap-5 items-start">
+              <div className="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl flex items-center justify-center shrink-0 text-white shadow-lg shadow-blue-500/20">
+                <Lucide.MessageCircle size={28} />
+              </div>
+              <div>
+                <h3 className="text-lg md:text-xl font-bold mb-1 md:mb-3 text-gray-100">AI Chat Cerdas</h3>
+                <p className="text-gray-400 leading-relaxed text-xs md:text-sm">Jawaban cepat, relevan, dan sesuai kebutuhan kamu.</p>
+              </div>
+            </div>
+            
+            <div className="bg-[#12141c]/80 backdrop-blur-md p-6 md:p-8 rounded-3xl border border-white/5 hover:border-indigo-500/30 transition-all flex flex-col sm:flex-row md:flex-col gap-5 items-start">
+              <div className="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-indigo-500 to-purple-700 rounded-2xl flex items-center justify-center shrink-0 text-white shadow-lg shadow-indigo-500/20">
+                <Lucide.Lightbulb size={28} />
+              </div>
+              <div>
+                <h3 className="text-lg md:text-xl font-bold mb-1 md:mb-3 text-gray-100">Bantu Ide & Kreativitas</h3>
+                <p className="text-gray-400 leading-relaxed text-xs md:text-sm">Dari brainstorming hingga konten, AI siap jadi partner idemu.</p>
+              </div>
+            </div>
+            
+            <div className="bg-[#12141c]/80 backdrop-blur-md p-6 md:p-8 rounded-3xl border border-white/5 hover:border-teal-500/30 transition-all flex flex-col sm:flex-row md:flex-col gap-5 items-start">
+              <div className="w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-teal-400 to-emerald-600 rounded-2xl flex items-center justify-center shrink-0 text-white shadow-lg shadow-teal-500/20">
+                <Lucide.Rocket size={28} />
+              </div>
+              <div>
+                <h3 className="text-lg md:text-xl font-bold mb-1 md:mb-3 text-gray-100">Mudah & Praktis</h3>
+                <p className="text-gray-400 leading-relaxed text-xs md:text-sm">Tampilan simpel, respons cepat, dan nyaman digunakan.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <footer className="text-center py-8 text-gray-500 text-xs md:text-sm border-t border-white/5 relative z-10">
+          <p>&copy; {new Date().getFullYear()} Kojet AI. Diciptakan oleh Fajar (@faajharr_)</p>
+          <p className="mt-1 opacity-60">Mahasiswa Teknik Elektro Universitas Tanjungpura - Sambas</p>
+        </footer>
+      </div>
+    );
+  }
+
+  // --- HALAMAN CHAT / ADMIN (Tampilan Utama Setelah Landing Page) ---
   return (
     <div className="fixed inset-0 flex bg-[#0f111a] text-gray-100 font-sans overflow-hidden">
       {isSidebarOpen && (
@@ -845,17 +936,15 @@ export default function App() {
         className={`fixed md:static inset-y-0 left-0 z-50 w-[280px] bg-[#161925] border-r border-gray-800/60 transform transition-transform duration-300 ease-in-out flex flex-col shadow-2xl md:shadow-none ${isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
       >
         <div className="p-4 md:p-5 flex items-center justify-between border-b border-gray-800/50">
-          <div className="flex items-center gap-3">
+          {/* Logo Sidebar diklik bisa balik ke Landing Page */}
+          <button onClick={() => setViewMode("landing")} className="flex items-center gap-3 text-left">
             <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-2 rounded-xl shadow-lg shadow-blue-500/20">
               <Lucide.TerminalSquare size={20} className="text-white" />
             </div>
             <span className="text-xl font-bold tracking-wide text-white">
-              Kojet
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">
-                AI
-              </span>
+              Kojet<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">AI</span>
             </span>
-          </div>
+          </button>
           <button
             onClick={() => setIsSidebarOpen(false)}
             className="md:hidden text-gray-400 hover:text-white bg-white/5 p-1.5 rounded-lg transition-colors"
@@ -933,17 +1022,16 @@ export default function App() {
             <ul className="text-[11px] space-y-2 text-gray-400 mt-3 animate-fade-in">
               <li className="flex gap-2 items-start">
                 <span className="text-blue-400 font-bold bg-blue-500/10 px-1 rounded shrink-0">
-                  v1.2
+                  v1.3
                 </span>
                 <span className="leading-tight">
-                  Menu attachment, unggah foto, baca dokumen asli Word & PDF,
-                  fitur perbaikan loading, dan render rumus matematika.
-                  (10-05-2026)
+                  Kojet AI berevolusi menjadi Asisten Cerdas Serba Bisa, bukan hanya sekadar untuk nugas.
+                  (13-05-2026)
                 </span>
               </li>
               <li className="flex gap-2 items-start opacity-60">
-                <span className="font-bold shrink-0">v1.0</span>
-                <span>Peluncuran perdana aplikasi Kojet AI. (09-05-2026)</span>
+                <span className="font-bold shrink-0">v1.2</span>
+                <span>Landing Page interaktif & fix docx/pdf. (12-05-2026)</span>
               </li>
             </ul>
           )}
@@ -1140,7 +1228,7 @@ export default function App() {
                     <p className="text-gray-400 max-w-[280px] md:max-w-md text-xs md:text-sm leading-relaxed mb-6 md:mb-8">
                       {!isRegistered
                         ? "Gue Kojet AI. Ketik nama panggilan lo di bawah ini dulu ya bro biar kita bisa mulai ngobrol!"
-                        : "Selamat datang di kojet ai. Ketik aja mau ngobrol apa, bisa dibantu ngerjain macem-macem, upload file DOCX/PDF, atau generate gambar!"}
+                        : "Selamat datang di Kojet AI. Ketik aja mau ngobrol apa, nanya sesuatu, kodingan, upload dokumen, atau sekadar generate gambar."}
                     </p>
 
                     {isRegistered && (
@@ -1150,18 +1238,18 @@ export default function App() {
                           className="p-3.5 md:p-4 rounded-xl md:rounded-2xl border border-white/5 bg-white/5 hover:bg-white/10 text-[13px] md:text-sm text-gray-300 transition-all hover:scale-[1.02] group"
                         >
                           <span className="flex items-center gap-2 text-blue-400 font-medium mb-1">
-                            <Lucide.Feather size={14} /> Kojet AI?
+                            <Lucide.Feather size={14} /> Apa itu Kojet AI?
                           </span>
-                          "Bro, apa itu kojet ai"
+                          "Tolong jelaskan apa saja yang bisa kamu lakuin"
                         </button>
                         <button
                           onClick={handleGenerateMode}
                           className="p-3.5 md:p-4 rounded-xl md:rounded-2xl border border-white/5 bg-white/5 hover:bg-white/10 text-[13px] md:text-sm text-gray-300 transition-all hover:scale-[1.02] group"
                         >
                           <span className="flex items-center gap-2 text-purple-400 font-medium mb-1">
-                            <Lucide.BookOpenText size={14} /> Bikin Makalah
+                            <Lucide.ImagePlus size={14} /> Generate Foto
                           </span>
-                          "Tolong buatkan makalah tentang...."
+                          "Tolong buatkan foto dengan gaya..."
                         </button>
                       </div>
                     )}
@@ -1470,7 +1558,7 @@ export default function App() {
                 </form>
                 <div className="text-center mt-2 md:mt-3 hidden md:block">
                   <span className="text-[10px] md:text-[11px] font-medium text-gray-500 bg-[#161925] px-3 py-1 rounded-full border border-gray-800/50">
-                    Kojet AI v1.2 ✨ AI Karya Biak Sambas
+                    Kojet AI v1.3 ✨ AI Karya Biak Sambas
                   </span>
                 </div>
               </div>
