@@ -54,29 +54,42 @@ export default async function handler(req) {
       { role: "system", content: systemPromptText }
     ];
 
+    // --- PERBAIKAN BUG 400 (BAD REQUEST) ---
+    // Grok Vision hanya mendukung gambar (JPG/PNG). Jika user mengirim PDF, Grok akan Error 400.
+    // Jadi kita harus memisahkan mana yang gambar asli, dan mana yang PDF/dokumen lain.
+    const validImages = (images || []).filter(img => img.mimeType && img.mimeType.startsWith("image/"));
+    const invalidFiles = (images || []).filter(img => img.mimeType && !img.mimeType.startsWith("image/"));
+
     // 2. Format riwayat chat dari frontend ke format Grok/OpenAI
     history.forEach((m, index) => {
       // Grok menggunakan role 'assistant' (bukan 'model' seperti Gemini)
       let role = m.role === "model" ? "assistant" : "user";
-      let content = m.text;
+      let textContent = m.text || "";
 
-      // Jika ini adalah pesan terakhir dari user DAN ada lampiran gambar/dokumen
-      if (index === history.length - 1 && role === "user" && images && images.length > 0) {
-        content = [{ type: "text", text: m.text }];
-        images.forEach((img) => {
+      // Jika user mencoba kirim PDF, kita selipkan instruksi rahasia ke Grok untuk ngasih tau user.
+      if (index === history.length - 1 && role === "user" && invalidFiles.length > 0) {
+        textContent += `\n\n[Sistem: Pengguna mencoba mengirim file PDF atau dokumen non-gambar. Ingatkan pengguna dengan ramah bahwa kamu (Grok) saat ini hanya bisa melihat gambar (JPG/PNG). Arahkan pengguna untuk memotret dokumen tersebut atau copy-paste isi teksnya secara manual.]`;
+      }
+
+      // Jika ini adalah pesan terakhir dari user DAN ada lampiran GAMBAR yang valid
+      if (index === history.length - 1 && role === "user" && validImages.length > 0) {
+        let content = [{ type: "text", text: textContent }];
+        validImages.forEach((img) => {
           content.push({
             type: "image_url",
             image_url: { url: `data:${img.mimeType};base64,${img.data}` }
           });
         });
+        formattedMessages.push({ role, content });
+      } else {
+        // Pesan teks biasa
+        formattedMessages.push({ role, content: textContent });
       }
-
-      formattedMessages.push({ role, content });
     });
 
-    // 3. Menentukan Model Grok
-    // Gunakan grok-2-vision-latest jika ada gambar, jika tidak gunakan grok-2-latest
-    const modelName = (images && images.length > 0) ? "grok-2-vision-latest" : "grok-2-latest";
+    // 3. Menentukan Model Grok yang paling stabil
+    // Gunakan grok-2-vision-1212 jika ada gambar, jika tidak gunakan grok-2-1212
+    const modelName = validImages.length > 0 ? "grok-2-vision-1212" : "grok-2-1212";
 
     // 4. Menyusun Payload (Data yang dikirim ke Grok)
     const payload = {
