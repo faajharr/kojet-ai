@@ -45,9 +45,9 @@ export default async function handler(req) {
     const validImages = (images || []).filter(img => img.mimeType && img.mimeType.startsWith("image/"));
     const invalidFiles = (images || []).filter(img => img.mimeType && !img.mimeType.startsWith("image/"));
 
-    // --- LANGSUNG TEMBAK KE MODEL TERBARU ---
-    // xAI merekomendasikan penggunaan alias "-latest" agar selalu dapat versi terbaru
-    const modelName = validImages.length > 0 ? "grok-2-vision-latest" : "grok-2-latest"; 
+    // --- MENGGUNAKAN MODEL YANG LEBIH STABIL ---
+    // Grok-2 dan Grok-2-vision adalah alias resmi yang paling stabil saat ini
+    const modelName = validImages.length > 0 ? "grok-2-vision" : "grok-2"; 
 
     // Endpoint Resmi Grok API Chat
     const url = "https://api.x.ai/v1/chat/completions";
