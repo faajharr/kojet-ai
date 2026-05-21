@@ -47,7 +47,7 @@ export default async function handler(req) {
 
     // --- MENGGUNAKAN MODEL YANG LEBIH STABIL ---
     // Grok-2 dan Grok-2-vision adalah alias resmi yang paling stabil saat ini
-    const modelName = validImages.length > 0 ? "grok-2-vision" : "grok-2"; 
+    const modelName = validImages.length > 0 ? "grok-4.20-reasoning"; 
 
     // Endpoint Resmi Grok API Chat
     const url = "https://api.x.ai/v1/chat/completions";
