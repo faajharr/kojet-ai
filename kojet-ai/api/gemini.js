@@ -1,5 +1,5 @@
 // api/gemini.js
-// Perbaikan: Menambahkan mekanisme fallback otomatis untuk model xAI
+// Perbaikan: Menambahkan logging dan penyesuaian header agar lebih stabil
 
 export const config = {
   runtime: "edge",
@@ -19,13 +19,11 @@ export default async function handler(req) {
     const { history } = await req.json();
     const apiKey = process.env.GROK_API_KEY;
 
-    if (!apiKey) return new Response(JSON.stringify({ text: "🚨 API Key tidak ditemukan." }), { status: 200, headers: corsHeaders });
+    if (!apiKey) return new Response(JSON.stringify({ text: "🚨 API Key tidak ditemukan di Vercel." }), { status: 200, headers: corsHeaders });
 
-    // Daftar model yang akan dicoba satu per satu jika gagal
+    // Daftar model yang dicoba
     const modelsToTry = ["grok-2", "grok-2-latest", "grok-beta", "grok-1"];
     let lastError = "";
-    let data = null;
-    let success = false;
 
     for (const modelName of modelsToTry) {
       const payload = {
@@ -40,24 +38,24 @@ export default async function handler(req) {
         method: "POST",
         headers: { 
           "Content-Type": "application/json", 
-          "Authorization": `Bearer ${apiKey}` 
+          "Authorization": `Bearer ${apiKey}`,
+          "User-Agent": "KojetAI-Backend" 
         },
         body: JSON.stringify(payload),
       });
 
-      data = await response.json();
-
       if (response.ok) {
-        success = true;
+        const data = await response.json();
         return new Response(JSON.stringify({ text: data.choices[0].message.content }), { status: 200, headers: corsHeaders });
       } else {
-        lastError = data.error?.message || "Unknown error";
+        const errorData = await response.json().catch(() => ({}));
+        lastError = errorData.error?.message || `Status ${response.status}`;
+        console.error(`Gagal menggunakan model ${modelName}:`, lastError);
       }
     }
 
-    // Jika semua model gagal
     return new Response(JSON.stringify({ 
-      text: `🚨 **Grok API Error**\n\nSemua model percobaan gagal. \n\nPesan terakhir: \`${lastError}\`\n\nPastikan API Key lo punya akses ke model-model xAI.` 
+      text: `🚨 **Grok API Error**\n\nSemua model percobaan gagal.\nPesan terakhir: \`${lastError}\`\n\nPastikan API Key Anda aktif dan memiliki saldo/akses di portal xAI.` 
     }), { status: 200, headers: corsHeaders });
 
   } catch (error) {
