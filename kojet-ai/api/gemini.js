@@ -47,13 +47,7 @@ export default async function handler(req) {
     }
 
     // Menggunakan model Gemini 3.1 Flash Lite sesuai request lo
-    curl https://api.x.ai/v1/responses \
-    -H "Content-Type: application/json" \
-    -H "Authorization: Bearer xai-KSRqve2BG2OmhToB5Lu6LEWFiRkjAQYloLJyc1taIsR8SkmqVOQUqrdlokCRf3kshbz4ZQb64mZ5DsFP" \
-    -d '{
-      "model": "grok-4.20-reasoning",
-      "input": "What is the meaning of life, the universe, and everything?"
-    }'
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${apiKey}`;
 
     // Format chat history
     const formattedMessages = history.map((m) => ({
