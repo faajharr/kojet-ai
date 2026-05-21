@@ -2,7 +2,7 @@
 // File ini berjalan di SERVER Vercel menggunakan Edge Runtime
 
 export const config = {
-  runtime: "edge", // Mantra ajaib biar gak kena limit 10 detik Vercel
+  runtime: "edge", // Mantra ajaib biar gak kena limit 10 detik Verce
 };
 
 export default async function handler(req) {
