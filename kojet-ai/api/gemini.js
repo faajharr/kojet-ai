@@ -45,30 +45,11 @@ export default async function handler(req) {
     const validImages = (images || []).filter(img => img.mimeType && img.mimeType.startsWith("image/"));
     const invalidFiles = (images || []).filter(img => img.mimeType && !img.mimeType.startsWith("image/"));
 
-    // --- FITUR BARU: CEK VERSI GROK YANG TERSEDIA DI AKUN ---
-    let availableModels = [];
-    let modelName = validImages.length > 0 ? "grok-2-vision-1212" : "grok-2-1212"; // Default fallback
+    // --- LANGSUNG TEMBAK KE MODEL TERBARU ---
+    // xAI merekomendasikan penggunaan alias "-latest" agar selalu dapat versi terbaru
+    const modelName = validImages.length > 0 ? "grok-2-vision-latest" : "grok-2-latest"; 
 
-    try {
-      const checkRes = await fetch("https://api.x.ai/v1/models", {
-        headers: { "Authorization": `Bearer ${apiKey}` }
-      });
-      if (checkRes.ok) {
-        const modelsData = await checkRes.json();
-        availableModels = modelsData.data.map(m => m.id);
-
-        if (validImages.length > 0) {
-          // Cari model yang memiliki kemampuan vision
-          modelName = availableModels.find(m => m.includes("vision")) || modelName;
-        } else {
-          // Cari model text standar terbaru
-          modelName = availableModels.find(m => m === "grok-2-1212" || m === "grok-2-latest" || m === "grok-2") || modelName;
-        }
-      }
-    } catch (e) {
-      console.error("Gagal mengecek model:", e);
-    }
-
+    // Endpoint Resmi Grok API Chat
     const url = "https://api.x.ai/v1/chat/completions";
 
     const systemPromptText = `Kamu adalah Kojet AI, sebuah kecerdasan buatan (AI) canggih yang berfungsi secara penuh layaknya asisten virtual serba bisa. Diciptakan oleh Fajar. Jika ditanya siapa Kojet AI dan siapa pembuatmu, jawab: Kojet AI adalah AI yang dibuat oleh Fajar (IG: @faajharr_). Arahkan pengguna untuk klik logo kamera untuk Instagram dan logo telepon untuk WhatsApp. Jawab pertanyaan dengan santai, akurat, informatif, tapi tetap asik. Kamu berfungsi sebagai AI serba bisa: menjawab pertanyaan kompleks, menganalisis data, coding, memecahkan masalah, hingga ngobrol santai. Jangan terlalu sering mengenalkan Fajar takutnya user jadi ilfil, kenalkan pas situasi tertentu saja atau jika ditanya. Fajar adalah mahasiswa teknik elektro Universitas Tanjungpura yang berada di Pontianak. Fajar berasal dari Sambas. Nama Kojet diambil dari nama panggilannya. Projek Fajar ada di Github dengan nama user faajharr`;
@@ -83,13 +64,15 @@ export default async function handler(req) {
 
       // Mencegah teks kosong yang ditolak oleh API
       if (!textContent.trim() && role === "user") {
-        textContent = "[Mengirim Sesuatu]";
+        textContent = "[Mengirim Lampiran]";
       }
 
+      // Jika ada file PDF, sisipkan pesan ke AI bahwa dia hanya bisa baca gambar
       if (index === history.length - 1 && role === "user" && invalidFiles.length > 0) {
         textContent += `\n\n[Sistem: Pengguna mencoba mengirim file PDF atau dokumen non-gambar. Ingatkan pengguna dengan ramah bahwa kamu (Grok) saat ini hanya bisa melihat gambar (JPG/PNG). Arahkan pengguna untuk memotret dokumen tersebut atau copy-paste isi teksnya secara manual.]`;
       }
 
+      // Jika pesan terakhir dan ada lampiran gambar
       if (index === history.length - 1 && role === "user" && validImages.length > 0) {
         let content = [{ type: "text", text: textContent }];
         validImages.forEach((img) => {
@@ -122,9 +105,8 @@ export default async function handler(req) {
     const data = await response.json();
 
     if (!response.ok) {
-      // JADIKAN STATUS 200 AGAR PESAN ERROR BISA MUNCUL LANGSUNG DI CHATBOX USER
       const errorMsg = data.error?.message || JSON.stringify(data);
-      const debugText = `🚨 **Grok API Error (400 Bad Request):**\n\nModel terpilih: \`${modelName}\`\nModel di akun lo: \`${availableModels.length > 0 ? availableModels.join(", ") : "Gagal Cek"}\`\n\n**Pesan dari Grok:**\n\`${errorMsg}\`\n\n*Pesan ini sengaja dimunculkan biar lo tau persis masalahnya apa.*`;
+      const debugText = `🚨 **Grok API Error (${response.status}):**\n\nModel terpilih: \`${modelName}\`\n\n**Pesan dari Grok:**\n\`${errorMsg}\`\n\n*Pesan ini sengaja dimunculkan biar lo tau persis masalahnya apa.*`;
       
       return new Response(
         JSON.stringify({ text: debugText }),
