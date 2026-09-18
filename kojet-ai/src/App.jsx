@@ -206,7 +206,7 @@ export default function App() {
 
   const [appSettings, setAppSettings] = useState({
     ig: "faajharr_",
-    wa: "083153437501",
+    wa: "6283153437501",
   });
   const [conversations, setConversations] = useState([]);
   const [input, setInput] = useState("");
@@ -912,6 +912,20 @@ export default function App() {
             </div>
           </div>
         </div>
+
+        <div className="max-w-3xl mx-auto px-6 py-16 border-t border-white/5 relative z-10 w-full">
+  <h2 className="text-3xl md:text-4xl font-bold mb-8 tracking-tight">Pertanyaan yang Sering Diajukan</h2>
+  <div className="space-y-6 text-left">
+    <div>
+      <h3 className="text-lg font-bold text-gray-100 mb-2">Apa itu Kojet AI?</h3>
+      <p className="text-gray-400 text-sm leading-relaxed">Kojet AI adalah asisten AI berbahasa Indonesia untuk membantu koding, membaca dokumen PDF dan Word, membuat gambar, dan menjawab pertanyaan sehari-hari.</p>
+    </div>
+    <div>
+      <h3 className="text-lg font-bold text-gray-100 mb-2">Siapa yang membuat Kojet AI?</h3>
+      <p className="text-gray-400 text-sm leading-relaxed">Kojet AI dibuat oleh Fajar (@faajharr_), mahasiswa Teknik Elektro Universitas Tanjungpura.</p>
+    </div>
+  </div>
+</div>
         
         <footer className="text-center py-8 text-gray-500 text-xs md:text-sm border-t border-white/5 relative z-10">
           <p>&copy; {new Date().getFullYear()} Kojet AI. Diciptakan oleh Fajar (@faajharr_)</p>
