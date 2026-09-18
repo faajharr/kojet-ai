@@ -206,7 +206,7 @@ export default function App() {
 
   const [appSettings, setAppSettings] = useState({
     ig: "faajharr_",
-    wa: "083153437501",
+    wa: "6283153437501",
   });
   const [conversations, setConversations] = useState([]);
   const [input, setInput] = useState("");
