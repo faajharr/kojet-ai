@@ -206,7 +206,7 @@ export default function App() {
 
   const [appSettings, setAppSettings] = useState({
     ig: "faajharr_",
-    wa: "083153437501",
+    wa: "6283153437501",
   });
   const [conversations, setConversations] = useState([]);
   const [input, setInput] = useState("");
@@ -983,55 +983,55 @@ export default function App() {
     <div className="fixed inset-0 flex bg-[#0f111a] text-gray-100 font-sans overflow-hidden">
       {isSidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/70 z-40 md:hidden backdrop-blur-sm transition-opacity"
+          className="fixed inset-0 bg-black/60 z-40 md:hidden transition-opacity"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
       {/* --- SIDEBAR --- */}
       <aside
-        className={`fixed md:static inset-y-0 left-0 z-50 w-[280px] bg-[#161925] border-r border-gray-800/60 transform transition-transform duration-300 ease-in-out flex flex-col shadow-2xl md:shadow-none ${isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
+        className={`fixed md:static inset-y-0 left-0 z-50 w-[272px] bg-[#14161f] border-r border-white/10 transform transition-transform duration-200 ease-out flex flex-col ${isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
       >
-        <div className="p-4 md:p-5 flex items-center justify-between border-b border-gray-800/50">
+        <div className="h-14 px-4 flex items-center justify-between border-b border-white/10">
           {/* Logo Sidebar diklik bisa balik ke Landing Page */}
-          <button onClick={() => setViewMode("landing")} className="flex items-center gap-3 text-left">
-            <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-2 rounded-xl shadow-lg shadow-blue-500/20">
-              <Lucide.TerminalSquare size={20} className="text-white" />
+          <button onClick={() => setViewMode("landing")} className="flex items-center gap-2.5 text-left">
+            <div className="w-7 h-7 rounded-md bg-blue-600 flex items-center justify-center">
+              <Lucide.TerminalSquare size={16} className="text-white" />
             </div>
-            <span className="text-xl font-bold tracking-wide text-white">
-              Kojet<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">AI</span>
+            <span className="text-[15px] font-semibold tracking-tight text-white">
+              Kojet <span className="text-blue-400">AI</span>
             </span>
           </button>
           <button
             onClick={() => setIsSidebarOpen(false)}
-            className="md:hidden text-gray-400 hover:text-white bg-white/5 p-1.5 rounded-lg transition-colors"
+            className="md:hidden text-gray-500 hover:text-white p-1"
           >
-            <Lucide.X size={20} />
+            <Lucide.X size={18} />
           </button>
         </div>
 
-        <div className="px-4 py-4">
+        <div className="px-3 pt-3">
           <button
             onClick={() => {
               createNewChat();
               setViewMode("chat");
             }}
-            className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white hover:bg-blue-500 py-3 md:py-2.5 px-4 rounded-xl transition-all font-semibold text-sm shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+            className="w-full flex items-center gap-2 border border-white/10 hover:border-white/20 hover:bg-white/5 text-gray-200 py-2.5 px-3 rounded-lg transition-colors text-sm font-medium"
           >
-            <Lucide.Plus size={18} /> Chat Baru
+            <Lucide.Plus size={16} /> Chat baru
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-3 py-2 custom-scrollbar">
-          <p className="text-[10px] md:text-[11px] font-bold text-gray-500 mb-3 px-3 uppercase tracking-widest">
-            Riwayat Percakapan
+        <div className="flex-1 overflow-y-auto px-2 pt-4 pb-2 custom-scrollbar">
+          <p className="text-[11px] font-medium text-gray-500 mb-2 px-2.5">
+            Riwayat
           </p>
           {conversations.length === 0 ? (
-            <p className="text-sm text-gray-600 px-3 italic">
-              Belum ada history.
+            <p className="text-[13px] text-gray-600 px-2.5">
+              Belum ada percakapan.
             </p>
           ) : (
-            <div className="space-y-1.5">
+            <div className="space-y-0.5">
               {conversations.map((conv) => (
                 <div key={conv.id} className="relative group">
                   <button
@@ -1039,20 +1039,16 @@ export default function App() {
                       loadChat(conv.id);
                       setViewMode("chat");
                     }}
-                    className={`w-full flex items-center gap-3 text-left px-3 py-3 md:py-2.5 rounded-lg transition-all text-sm pr-10 ${currentChatId === conv.id && viewMode === "chat" ? "bg-blue-600/10 text-blue-400 border border-blue-500/20" : "text-gray-400 hover:bg-white/5 hover:text-gray-200 border border-transparent"}`}
+                    className={`w-full text-left px-2.5 py-2 md:py-2 rounded-md transition-colors text-[13px] pr-8 truncate ${currentChatId === conv.id && viewMode === "chat" ? "bg-white/10 text-white" : "text-gray-400 hover:bg-white/5 hover:text-gray-200"}`}
                   >
-                    <Lucide.MessageSquare
-                      size={16}
-                      className={`shrink-0 ${currentChatId === conv.id && viewMode === "chat" ? "text-blue-500" : "text-gray-500"}`}
-                    />
-                    <span className="truncate">{conv.title}</span>
+                    {conv.title}
                   </button>
                   <button
                     onClick={(e) => handleDeleteChat(e, conv.id)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity rounded-md hover:bg-red-500/10"
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity rounded"
                     title="Hapus Chat"
                   >
-                    <Lucide.Trash2 size={14} />
+                    <Lucide.Trash2 size={13} />
                   </button>
                 </div>
               ))}
@@ -1060,25 +1056,25 @@ export default function App() {
           )}
         </div>
 
-        <div className="px-4 py-3 border-t border-gray-800/60 bg-[#12141c]">
+        <div className="px-3 py-2 border-t border-white/10">
           <button
             onClick={() => setShowUpdateInfo(!showUpdateInfo)}
-            className="w-full text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center justify-between hover:text-gray-300 transition-colors"
+            className="w-full text-[11px] text-gray-500 flex items-center justify-between hover:text-gray-300 transition-colors py-1"
           >
             <span className="flex items-center gap-1.5">
-              <Lucide.Info size={12} /> Info Update
+              <Lucide.Info size={12} /> Info update
             </span>
             {showUpdateInfo ? (
-              <Lucide.ChevronDown size={14} />
+              <Lucide.ChevronDown size={13} />
             ) : (
-              <Lucide.ChevronRight size={14} />
+              <Lucide.ChevronRight size={13} />
             )}
           </button>
 
           {showUpdateInfo && (
-            <ul className="text-[11px] space-y-2 text-gray-400 mt-3 animate-fade-in">
+            <ul className="text-[11px] space-y-2 text-gray-400 mt-2 pb-1">
               <li className="flex gap-2 items-start">
-                <span className="text-blue-400 font-bold bg-blue-500/10 px-1 rounded shrink-0">
+                <span className="text-blue-400 font-medium shrink-0">
                   v1.3
                 </span>
                 <span className="leading-tight">
@@ -1086,36 +1082,36 @@ export default function App() {
                   (13-05-2026)
                 </span>
               </li>
-              <li className="flex gap-2 items-start opacity-60">
-                <span className="font-bold shrink-0">v1.2</span>
+              <li className="flex gap-2 items-start opacity-50">
+                <span className="font-medium shrink-0">v1.2</span>
                 <span>Landing Page interaktif & fix docx/pdf. (12-05-2026)</span>
               </li>
             </ul>
           )}
         </div>
 
-        <div className="p-4 border-t border-gray-800/60 bg-[#161925]">
-          <div className="flex items-center gap-3 text-sm text-gray-400 bg-black/20 p-2.5 rounded-xl border border-white/5">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-gray-700 to-gray-600 flex items-center justify-center shrink-0 uppercase">
-              <span className="text-xs font-bold text-white">
+        <div className="p-3 border-t border-white/10">
+          <div className="flex items-center gap-2.5 text-sm text-gray-400 p-1.5 rounded-lg">
+            <div className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center shrink-0 uppercase">
+              <span className="text-[11px] font-semibold text-gray-200">
                 {userName ? userName.substring(0, 2) : "?"}
               </span>
             </div>
             <div className="truncate flex-1">
-              <p className="font-semibold text-gray-200 text-xs truncate">
+              <p className="font-medium text-gray-200 text-[13px] truncate">
                 {userName || "Tamu"}
               </p>
-              <p className="text-[10px] font-mono opacity-60 truncate mt-0.5">
-                ID: {activeUid ? activeUid.substring(0, 6) : "Unknown"}
+              <p className="text-[10px] font-mono opacity-50 truncate">
+                {activeUid ? activeUid.substring(0, 6) : "Unknown"}
               </p>
             </div>
             {isRegistered && (
               <button
                 onClick={handleLogout}
-                className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                className="p-1.5 text-gray-500 hover:text-red-400 rounded-md transition-colors"
                 title="Ganti Nama / Logout"
               >
-                <Lucide.LogOut size={16} />
+                <Lucide.LogOut size={15} />
               </button>
             )}
           </div>
@@ -1124,31 +1120,23 @@ export default function App() {
 
       {/* --- MAIN AREA --- */}
       <main className="flex-1 flex flex-col h-full relative min-w-0 bg-[#0f111a] w-full max-w-full overflow-hidden">
-        <div className="absolute top-0 left-1/4 w-[300px] md:w-[500px] h-[300px] md:h-[500px] bg-blue-600/10 rounded-full blur-[100px] md:blur-[120px] pointer-events-none"></div>
-
-        <header className="h-14 md:h-16 flex-none flex items-center justify-between px-3 md:px-6 border-b border-white/5 bg-[#0f111a]/95 backdrop-blur-xl relative z-20">
+        <header className="h-14 flex-none flex items-center justify-between px-3 md:px-6 border-b border-white/10 relative z-20">
           <div className="flex items-center gap-2 md:gap-3">
             <button
               onClick={() => setIsSidebarOpen(true)}
-              className="md:hidden p-2 -ml-1 text-gray-400 hover:text-white rounded-lg bg-white/5 transition-colors"
+              className="md:hidden p-1.5 -ml-1 text-gray-400 hover:text-white transition-colors"
             >
               <Lucide.Menu size={22} />
             </button>
-            <h1 className="text-[15px] md:text-sm font-semibold text-gray-200 flex items-center gap-2">
-              <Lucide.Sparkles
-                size={16}
-                className={
-                  viewMode === "chat" ? "text-blue-400" : "text-emerald-400"
-                }
-              />
+            <h1 className="text-sm font-medium text-gray-300">
               {viewMode === "chat" ? "Kojet AI" : "Admin Dashboard"}
             </h1>
           </div>
-          <div className="flex items-center gap-3 md:gap-4 text-[10px] md:text-[11px] text-gray-400">
+          <div className="flex items-center gap-4 text-[12px] text-gray-500">
             {viewMode === "admin_dashboard" ? (
               <button
                 onClick={() => setViewMode("chat")}
-                className="flex items-center gap-1.5 hover:text-red-400 transition-colors bg-red-500/10 text-red-500 px-3 py-1.5 rounded-md"
+                className="flex items-center gap-1.5 hover:text-red-400 transition-colors"
               >
                 <Lucide.LogOut size={14} /> Tutup Admin
               </button>
@@ -1158,18 +1146,18 @@ export default function App() {
                   href={`https://instagram.com/${appSettings.ig}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-1 hover:text-blue-400 transition-colors bg-white/5 px-2 py-1 md:py-1.5 rounded-md"
+                  className="flex items-center gap-1.5 hover:text-gray-300 transition-colors"
                 >
-                  <Lucide.Camera size={12} />{" "}
+                  <Lucide.Camera size={13} />{" "}
                   <span className="hidden sm:inline">@{appSettings.ig}</span>
                 </a>
                 <a
                   href={`https://wa.me/${appSettings.wa}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-1 hover:text-green-400 transition-colors bg-white/5 px-2 py-1 md:py-1.5 rounded-md"
+                  className="flex items-center gap-1.5 hover:text-gray-300 transition-colors"
                 >
-                  <Lucide.Phone size={12} />{" "}
+                  <Lucide.Phone size={13} />{" "}
                   <span className="hidden sm:inline">{appSettings.wa}</span>
                 </a>
               </>
@@ -1180,33 +1168,26 @@ export default function App() {
         {/* --- ADMIN DASHBOARD --- */}
         {viewMode === "admin_dashboard" && (
           <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar relative z-10">
-            <div className="max-w-5xl mx-auto space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="bg-[#161925] border border-gray-800 p-6 rounded-2xl flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center border border-blue-500/30">
-                    <Lucide.Users size={20} className="text-blue-400" />
-                  </div>
+            <div className="max-w-5xl mx-auto space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div className="border border-white/10 p-5 rounded-lg flex items-center gap-3">
+                  <Lucide.Users size={18} className="text-blue-400 shrink-0" />
                   <div>
-                    <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">
+                    <p className="text-[11px] text-gray-500">
                       Total User
                     </p>
-                    <h3 className="text-2xl font-bold text-white">
+                    <h3 className="text-xl font-semibold text-white">
                       {allUsersStats.length}
                     </h3>
                   </div>
                 </div>
-                <div className="bg-[#161925] border border-gray-800 p-6 rounded-2xl flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center border border-green-500/30">
-                    <Lucide.MessageSquare
-                      size={20}
-                      className="text-green-400"
-                    />
-                  </div>
+                <div className="border border-white/10 p-5 rounded-lg flex items-center gap-3">
+                  <Lucide.MessageSquare size={18} className="text-blue-400 shrink-0" />
                   <div>
-                    <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">
+                    <p className="text-[11px] text-gray-500">
                       Total Pesan Dibuat
                     </p>
-                    <h3 className="text-2xl font-bold text-white">
+                    <h3 className="text-xl font-semibold text-white">
                       {allUsersStats.reduce(
                         (acc, curr) => acc + (curr.totalMessages || 0),
                         0,
@@ -1215,43 +1196,40 @@ export default function App() {
                   </div>
                 </div>
               </div>
-              <div className="bg-[#161925] border border-gray-800 rounded-2xl overflow-hidden shadow-xl">
-                <div className="px-6 py-4 border-b border-gray-800 flex justify-between items-center bg-[#1a1d2d]">
-                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                    <Lucide.BarChart3 size={16} className="text-blue-400" />{" "}
+              <div className="border border-white/10 rounded-lg overflow-hidden">
+                <div className="px-5 py-3 border-b border-white/10">
+                  <h3 className="text-sm font-medium text-white">
                     Data Pengguna Kojet AI
                   </h3>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm text-gray-400">
-                    <thead className="text-xs text-gray-500 uppercase bg-[#0f111a]/50">
+                    <thead className="text-[11px] text-gray-500">
                       <tr>
-                        <th className="px-6 py-4 font-medium">Nama User</th>
-                        <th className="px-6 py-4 font-medium">ID (UID)</th>
-                        <th className="px-6 py-4 font-medium">Jumlah Pesan</th>
-                        <th className="px-6 py-4 font-medium">
+                        <th className="px-5 py-3 font-medium">Nama User</th>
+                        <th className="px-5 py-3 font-medium">ID (UID)</th>
+                        <th className="px-5 py-3 font-medium">Jumlah Pesan</th>
+                        <th className="px-5 py-3 font-medium">
                           Terakhir Aktif
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-800">
+                    <tbody className="divide-y divide-white/5">
                       {allUsersStats.map((u, i) => (
                         <tr
                           key={i}
                           className="hover:bg-white/5 transition-colors"
                         >
-                          <td className="px-6 py-4 font-medium text-gray-200">
+                          <td className="px-5 py-3 font-medium text-gray-200">
                             {u.name}
                           </td>
-                          <td className="px-6 py-4 font-mono text-[11px] opacity-70">
+                          <td className="px-5 py-3 font-mono text-[11px] opacity-60">
                             {u.uid}
                           </td>
-                          <td className="px-6 py-4">
-                            <span className="bg-blue-500/10 text-blue-400 px-2.5 py-1 rounded-full text-xs font-bold border border-blue-500/20">
-                              {u.totalMessages || 0} Pesan
-                            </span>
+                          <td className="px-5 py-3 text-gray-300">
+                            {u.totalMessages || 0}
                           </td>
-                          <td className="px-6 py-4 text-xs">
+                          <td className="px-5 py-3 text-xs">
                             {new Date(u.lastActive).toLocaleString("id-ID")}
                           </td>
                         </tr>
@@ -1270,43 +1248,40 @@ export default function App() {
             <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 md:p-6 custom-scrollbar relative z-0 w-full">
               <div className="max-w-4xl mx-auto space-y-6 md:space-y-8 pb-10 w-full">
                 {messages.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full text-center mt-6 md:mt-24 opacity-90 animate-fade-in px-2 w-full">
-                    <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 rounded-2xl md:rounded-3xl flex items-center justify-center mb-4 md:mb-6 border border-blue-500/30 shadow-[0_0_50px_rgba(59,130,246,0.15)] relative">
-                      <Lucide.TerminalSquare
-                        size={20}
-                        className="text-blue-400 md:w-10 md:h-10 relative z-10"
-                      />
+                  <div className="flex flex-col items-center justify-center h-full text-center mt-6 md:mt-24 px-2 w-full">
+                    <div className="w-11 h-11 rounded-lg bg-blue-600 flex items-center justify-center mb-5">
+                      <Lucide.TerminalSquare size={20} className="text-white" />
                     </div>
-                    <h2 className="text-2xl md:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 mb-2 md:mb-3 tracking-tight px-4">
+                    <h2 className="text-xl md:text-2xl font-semibold text-gray-100 mb-2 px-4">
                       {!isRegistered
-                        ? "Selamat Datang di Kojet AI!"
-                        : `Hai ${userName}, Mau bahas apa nih bro?`}
+                        ? "Selamat datang di Kojet AI"
+                        : `Hai ${userName}, mau bahas apa nih bro?`}
                     </h2>
-                    <p className="text-gray-400 max-w-[280px] md:max-w-md text-xs md:text-sm leading-relaxed mb-6 md:mb-8">
+                    <p className="text-gray-500 max-w-[280px] md:max-w-md text-[13px] md:text-sm leading-relaxed mb-8">
                       {!isRegistered
                         ? "Gue Kojet AI. Ketik nama panggilan lo di bawah ini dulu ya bro biar kita bisa mulai ngobrol!"
-                        : "Selamat datang di Kojet AI. Ketik aja mau ngobrol apa, nanya sesuatu, kodingan, upload dokumen, atau sekadar generate gambar."}
+                        : "Ketik aja mau ngobrol apa, nanya sesuatu, kodingan, upload dokumen, atau sekadar generate gambar."}
                     </p>
 
                     {isRegistered && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 w-full max-w-2xl text-left px-2">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 w-full max-w-2xl text-left px-2">
                         <button
                           onClick={() => setInput("Apa itu kojet ai")}
-                          className="p-3.5 md:p-4 rounded-xl md:rounded-2xl border border-white/5 bg-white/5 hover:bg-white/10 text-[13px] md:text-sm text-gray-300 transition-all hover:scale-[1.02] group"
+                          className="p-3.5 rounded-lg border border-white/10 hover:border-white/20 hover:bg-white/5 text-[13px] md:text-sm text-gray-300 transition-colors"
                         >
-                          <span className="flex items-center gap-2 text-blue-400 font-medium mb-1">
-                            <Lucide.Feather size={14} /> Apa itu Kojet AI?
+                          <span className="flex items-center gap-2 text-gray-200 font-medium mb-1">
+                            <Lucide.Feather size={14} className="text-gray-500" /> Apa itu Kojet AI?
                           </span>
-                          "Tolong jelaskan apa saja yang bisa kamu lakuin"
+                          <span className="text-gray-500">"Tolong jelaskan apa saja yang bisa kamu lakuin"</span>
                         </button>
                         <button
                           onClick={handleGenerateMode}
-                          className="p-3.5 md:p-4 rounded-xl md:rounded-2xl border border-white/5 bg-white/5 hover:bg-white/10 text-[13px] md:text-sm text-gray-300 transition-all hover:scale-[1.02] group"
+                          className="p-3.5 rounded-lg border border-white/10 hover:border-white/20 hover:bg-white/5 text-[13px] md:text-sm text-gray-300 transition-colors"
                         >
-                          <span className="flex items-center gap-2 text-purple-400 font-medium mb-1">
-                            <Lucide.ImagePlus size={14} /> Generate Foto
+                          <span className="flex items-center gap-2 text-gray-200 font-medium mb-1">
+                            <Lucide.ImagePlus size={14} className="text-gray-500" /> Generate Foto
                           </span>
-                          "Tolong buatkan foto dengan gaya..."
+                          <span className="text-gray-500">"Tolong buatkan foto dengan gaya..."</span>
                         </button>
                       </div>
                     )}
@@ -1318,25 +1293,25 @@ export default function App() {
                       className={`flex flex-col gap-2 ${msg.role === "user" ? "items-end" : "items-start"} w-full`}
                     >
                       <div
-                        className={`flex gap-3 md:gap-5 w-full ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}
+                        className={`flex gap-2.5 md:gap-3 w-full ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}
                       >
                         <div
-                          className={`w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center shrink-0 shadow-lg mt-1 md:mt-0 ${msg.role === "user" ? "bg-gradient-to-br from-blue-600 to-indigo-600" : "bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700"}`}
+                          className={`w-7 h-7 md:w-8 md:h-8 rounded-md flex items-center justify-center shrink-0 mt-0.5 ${msg.role === "user" ? "bg-white/10" : "bg-blue-600"}`}
                         >
                           {msg.role === "user" ? (
-                            <span className="text-[11px] md:text-sm font-bold text-white uppercase">
+                            <span className="text-[10px] md:text-[11px] font-semibold text-gray-200 uppercase">
                               {userName ? userName.substring(0, 2) : "ME"}
                             </span>
                           ) : (
                             <Lucide.TerminalSquare
-                              size={16}
-                              className="text-blue-400 md:w-5 md:h-5"
+                              size={14}
+                              className="text-white md:w-4 md:h-4"
                             />
                           )}
                         </div>
 
                         <div
-                          className={`max-w-[85%] rounded-2xl md:rounded-3xl px-4 py-3 md:px-6 md:py-4 shadow-xl overflow-hidden ${msg.role === "user" ? "bg-blue-600 text-white rounded-tr-sm" : "bg-[#181a25] border border-white/5 text-gray-100 rounded-tl-sm w-full"}`}
+                          className={`max-w-[85%] rounded-xl px-3.5 py-2.5 md:px-4 md:py-3 overflow-hidden ${msg.role === "user" ? "bg-blue-600 text-white" : "bg-white/[0.04] border border-white/5 text-gray-100 w-full"}`}
                         >
                           {msg.attachments && msg.attachments.length > 0 && (
                             <div className="flex flex-wrap gap-2 mb-3">
@@ -1346,7 +1321,7 @@ export default function App() {
                                     key={i}
                                     src={att.url}
                                     alt="Uploaded"
-                                    className="w-20 h-20 md:w-24 md:h-24 object-cover rounded-xl border border-white/20 shadow-md"
+                                    className="w-20 h-20 md:w-24 md:h-24 object-cover rounded-lg border border-white/10"
                                   />
                                 ) : (
                                   <div
@@ -1376,56 +1351,36 @@ export default function App() {
                       </div>
 
                       {msg.role === "model" && (
-                        <div className="flex flex-wrap gap-2 ml-11 md:ml-16 mt-1 mb-2">
+                        <div className="flex flex-wrap gap-3 ml-9 md:ml-11 mt-0.5 mb-1">
                           <button
                             onClick={() => handleToggleSpeech(msg.text, index)}
-                            className="flex items-center gap-1.5 text-[10px] md:text-[11px] font-medium bg-green-600/20 text-green-400 hover:bg-green-600/40 px-2.5 py-1.5 md:px-3 md:py-1.5 rounded-lg transition-colors border border-green-500/20 w-[85px] justify-center"
+                            className="flex items-center gap-1.5 text-[11px] text-gray-500 hover:text-gray-200 transition-colors"
                           >
                             {speakingIndex === index && !isPaused ? (
                               <>
-                                <Lucide.Pause
-                                  size={12}
-                                  className="md:w-3.5 md:h-3.5"
-                                />{" "}
-                                Pause
+                                <Lucide.Pause size={13} /> Pause
                               </>
                             ) : speakingIndex === index && isPaused ? (
                               <>
-                                <Lucide.Play
-                                  size={12}
-                                  className="md:w-3.5 md:h-3.5"
-                                />{" "}
-                                Lanjut
+                                <Lucide.Play size={13} /> Lanjut
                               </>
                             ) : (
                               <>
-                                <Lucide.Volume2
-                                  size={12}
-                                  className="md:w-3.5 md:h-3.5"
-                                />{" "}
-                                Bacakan
+                                <Lucide.Volume2 size={13} /> Bacakan
                               </>
                             )}
                           </button>
                           <button
                             onClick={() => exportToWord(msg.text)}
-                            className="flex items-center gap-1.5 text-[10px] md:text-[11px] font-medium bg-blue-600/20 text-blue-400 hover:bg-blue-600/40 px-2.5 py-1.5 md:px-3 md:py-1.5 rounded-lg transition-colors border border-blue-500/20"
+                            className="flex items-center gap-1.5 text-[11px] text-gray-500 hover:text-gray-200 transition-colors"
                           >
-                            <Lucide.FileText
-                              size={12}
-                              className="md:w-3.5 md:h-3.5"
-                            />{" "}
-                            Word
+                            <Lucide.FileText size={13} /> Word
                           </button>
                           <button
                             onClick={() => exportToPDF(msg.text)}
-                            className="flex items-center gap-1.5 text-[10px] md:text-[11px] font-medium bg-red-600/20 text-red-400 hover:bg-red-600/40 px-2.5 py-1.5 md:px-3 md:py-1.5 rounded-lg transition-colors border border-red-500/20"
+                            className="flex items-center gap-1.5 text-[11px] text-gray-500 hover:text-gray-200 transition-colors"
                           >
-                            <Lucide.Printer
-                              size={12}
-                              className="md:w-3.5 md:h-3.5"
-                            />{" "}
-                            PDF
+                            <Lucide.Printer size={13} /> PDF
                           </button>
                         </div>
                       )}
@@ -1433,29 +1388,29 @@ export default function App() {
                   ))
                 )}
                 {isLoading && (
-                  <div className="flex gap-3 md:gap-5 w-full">
-                    <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700 flex items-center justify-center shrink-0">
+                  <div className="flex gap-2.5 md:gap-3 w-full">
+                    <div className="w-7 h-7 md:w-8 md:h-8 rounded-md bg-blue-600 flex items-center justify-center shrink-0">
                       <Lucide.TerminalSquare
-                        size={16}
-                        className="text-blue-400 md:w-5 md:h-5"
+                        size={14}
+                        className="text-white md:w-4 md:h-4"
                       />
                     </div>
-                    <div className="bg-[#181a25] border border-white/5 rounded-2xl md:rounded-3xl rounded-tl-sm px-5 py-3 md:px-6 md:py-4 flex items-center gap-3">
-                      <div className="flex gap-1.5">
+                    <div className="bg-white/[0.04] border border-white/5 rounded-xl px-4 py-3 flex items-center gap-2.5">
+                      <div className="flex gap-1">
                         <div
-                          className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-blue-500 animate-bounce"
+                          className="w-1.5 h-1.5 rounded-full bg-gray-500 animate-bounce"
                           style={{ animationDelay: "0ms" }}
                         ></div>
                         <div
-                          className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-indigo-500 animate-bounce"
+                          className="w-1.5 h-1.5 rounded-full bg-gray-500 animate-bounce"
                           style={{ animationDelay: "150ms" }}
                         ></div>
                         <div
-                          className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-purple-500 animate-bounce"
+                          className="w-1.5 h-1.5 rounded-full bg-gray-500 animate-bounce"
                           style={{ animationDelay: "300ms" }}
                         ></div>
                       </div>
-                      <span className="text-[13px] md:text-sm font-medium bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400 animate-pulse">
+                      <span className="text-[13px] text-gray-500">
                         {!isRegistered
                           ? "Kojet AI lagi nyiapin obrolan lo..."
                           : "Kojet AI lagi ngetik..."}
@@ -1468,10 +1423,10 @@ export default function App() {
             </div>
 
             {/* --- INPUT AREA --- */}
-            <div className="p-2 md:p-4 bg-[#0f111a] md:bg-gradient-to-t md:from-[#0f111a] md:via-[#0f111a] md:to-transparent shrink-0 relative z-30">
+            <div className="p-2 md:p-4 bg-[#0f111a] shrink-0 relative z-30">
               <div className="max-w-4xl mx-auto w-full relative">
                 {imageAttachments.length > 0 && (
-                  <div className="flex flex-wrap gap-2 md:gap-3 mb-2 md:mb-3 p-2 md:p-3 bg-white/5 backdrop-blur-md rounded-xl md:rounded-2xl border border-white/5">
+                  <div className="flex flex-wrap gap-2 md:gap-3 mb-2 md:mb-3 p-2 md:p-3 bg-white/5 rounded-lg border border-white/5">
                     {imageAttachments.map((img, idx) => (
                       <div
                         key={idx}
@@ -1505,7 +1460,7 @@ export default function App() {
 
                 <form
                   onSubmit={handleSendMessage}
-                  className="relative flex items-end gap-1.5 md:gap-2 bg-[#161925] p-1.5 md:p-2 rounded-2xl md:rounded-3xl border border-gray-700/50 shadow-xl md:shadow-2xl md:shadow-black/50 focus-within:border-blue-500/50 focus-within:ring-2 md:focus-within:ring-4 focus-within:ring-blue-500/10 transition-all w-full"
+                  className="relative flex items-end gap-1.5 md:gap-2 bg-[#161925] p-1.5 md:p-2 rounded-xl border border-white/10 focus-within:border-blue-500/50 transition-colors w-full"
                 >
                   <input
                     type="file"
@@ -1521,10 +1476,10 @@ export default function App() {
                       type="button"
                       disabled={!isRegistered}
                       onClick={() => setShowAttachMenu(!showAttachMenu)}
-                      className={`p-2.5 md:p-3.5 rounded-full transition-colors shrink-0 ${!isRegistered ? "text-gray-600 opacity-50 cursor-not-allowed" : "text-gray-400 hover:text-white hover:bg-white/10"}`}
+                      className={`p-2.5 md:p-3 rounded-lg transition-colors shrink-0 ${!isRegistered ? "text-gray-600 opacity-50 cursor-not-allowed" : "text-gray-400 hover:text-white hover:bg-white/10"}`}
                       title="Upload Menu"
                     >
-                      <Lucide.Paperclip size={20} className="md:w-5 md:h-5" />
+                      <Lucide.Paperclip size={19} className="md:w-[18px] md:h-[18px]" />
                     </button>
                     {showAttachMenu && isRegistered && (
                       <>
@@ -1532,28 +1487,22 @@ export default function App() {
                           className="fixed inset-0 z-40"
                           onClick={() => setShowAttachMenu(false)}
                         ></div>
-                        <div className="absolute bottom-full left-0 mb-2 w-56 bg-[#1e1e2e] border border-gray-700 rounded-xl shadow-2xl p-1.5 z-50 flex flex-col gap-1 animate-fade-in">
+                        <div className="absolute bottom-full left-0 mb-2 w-52 bg-[#1a1c28] border border-white/10 rounded-lg p-1 z-50 flex flex-col gap-0.5 animate-fade-in">
                           <button
                             type="button"
                             onClick={() => fileInputRef.current?.click()}
-                            className="flex items-center gap-3 w-full text-left p-2.5 hover:bg-white/10 rounded-lg text-sm text-gray-200 transition-colors"
+                            className="flex items-center gap-2.5 w-full text-left px-2.5 py-2 hover:bg-white/10 rounded-md text-[13px] text-gray-200 transition-colors"
                           >
-                            <Lucide.FileUp
-                              size={16}
-                              className="text-blue-400"
-                            />{" "}
-                            Upload Foto/Dokumen
+                            <Lucide.FileUp size={15} className="text-gray-500" />
+                            Upload foto/dokumen
                           </button>
                           <button
                             type="button"
                             onClick={handleGenerateMode}
-                            className="flex items-center gap-3 w-full text-left p-2.5 hover:bg-white/10 rounded-lg text-sm text-gray-200 transition-colors"
+                            className="flex items-center gap-2.5 w-full text-left px-2.5 py-2 hover:bg-white/10 rounded-md text-[13px] text-gray-200 transition-colors"
                           >
-                            <Lucide.ImagePlus
-                              size={16}
-                              className="text-purple-400"
-                            />{" "}
-                            Generate Foto AI
+                            <Lucide.ImagePlus size={15} className="text-gray-500" />
+                            Generate foto AI
                           </button>
                         </div>
                       </>
@@ -1590,7 +1539,7 @@ export default function App() {
                     type="button"
                     disabled={!isRegistered}
                     onClick={toggleListening}
-                    className={`p-2.5 md:p-3.5 rounded-full transition-all duration-300 shrink-0 ${!isRegistered ? "text-gray-600 opacity-50 cursor-not-allowed" : isListening ? "bg-red-500/20 text-red-500 hover:bg-red-500/30 animate-pulse" : "text-gray-400 hover:text-white hover:bg-white/10"}`}
+                    className={`p-2.5 md:p-3 rounded-lg transition-colors shrink-0 ${!isRegistered ? "text-gray-600 opacity-50 cursor-not-allowed" : isListening ? "bg-red-500/10 text-red-500 animate-pulse" : "text-gray-400 hover:text-white hover:bg-white/10"}`}
                     title="Dikte Suara"
                   >
                     {isListening ? (
@@ -1605,16 +1554,13 @@ export default function App() {
                       (!input.trim() && imageAttachments.length === 0) ||
                       isLoading
                     }
-                    className="p-2.5 md:p-3.5 mr-0.5 md:mr-1 mb-0.5 md:mb-1 rounded-full md:rounded-[1.2rem] bg-blue-600 text-white hover:bg-blue-500 disabled:bg-gray-800 disabled:text-gray-600 transition-all shadow-lg disabled:shadow-none shrink-0 active:scale-95"
+                    className="p-2.5 md:p-3 mr-0.5 mb-0.5 rounded-lg bg-blue-600 text-white hover:bg-blue-500 disabled:bg-white/5 disabled:text-gray-600 transition-colors shrink-0"
                   >
-                    <Lucide.Send
-                      size={20}
-                      className={`md:w-5 md:h-5 ${input.trim() || imageAttachments.length > 0 ? "translate-x-0.5 -translate-y-0.5 md:translate-x-1 md:-translate-y-1" : ""}`}
-                    />
+                    <Lucide.Send size={18} />
                   </button>
                 </form>
-                <div className="text-center mt-2 md:mt-3 hidden md:block">
-                  <span className="text-[10px] md:text-[11px] font-medium text-gray-500 bg-[#161925] px-3 py-1 rounded-full border border-gray-800/50">
+                <div className="text-center mt-2 hidden md:block">
+                  <span className="text-[11px] text-gray-600">
                     Kojet AI v1.3
                   </span>
                 </div>
