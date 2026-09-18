@@ -844,8 +844,8 @@ export default function App() {
     ];
     const langkah = [
       { judul: "Buka ruang obrolan", isi: "Klik Mulai ngobrol. Tampilannya sama nyamannya di HP maupun laptop." },
+      { judul: "Masukkan nama", isi: "Ketik nama kamu, yang mana nama itu akan menjadi panggilan ada saat mulai mengobrol." },
       { judul: "Tulis atau unggah", isi: "Ketik pertanyaanmu, bicara lewat mikrofon, atau lampirkan dokumen dan file kode." },
-      { judul: "Pakai jawabannya", isi: "Jawaban muncul dalam hitungan detik. Salin, dengarkan, atau simpan ke Word dan PDF." },
     ];
     const faq = [
       { q: "Apa itu Kojet AI?", a: "Kojet AI adalah asisten AI berbahasa Indonesia untuk membantu koding, membaca dokumen PDF dan Word, membuat gambar, dan menjawab pertanyaan sehari-hari." },
