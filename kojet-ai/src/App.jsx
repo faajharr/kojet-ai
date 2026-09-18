@@ -206,7 +206,7 @@ export default function App() {
 
   const [appSettings, setAppSettings] = useState({
     ig: "faajharr_",
-    wa: "6283153437501",
+    wa: "083153437501",
   });
   const [conversations, setConversations] = useState([]);
   const [input, setInput] = useState("");
@@ -912,21 +912,89 @@ export default function App() {
             </div>
           </div>
         </div>
-
-        <div className="max-w-3xl mx-auto px-6 py-16 border-t border-white/5 relative z-10 w-full">
-  <h2 className="text-3xl md:text-4xl font-bold mb-8 tracking-tight">Pertanyaan yang Sering Diajukan</h2>
-  <div className="space-y-6 text-left">
-    <div>
-      <h3 className="text-lg font-bold text-gray-100 mb-2">Apa itu Kojet AI?</h3>
-      <p className="text-gray-400 text-sm leading-relaxed">Kojet AI adalah asisten AI berbahasa Indonesia untuk membantu koding, membaca dokumen PDF dan Word, membuat gambar, dan menjawab pertanyaan sehari-hari.</p>
-    </div>
-    <div>
-      <h3 className="text-lg font-bold text-gray-100 mb-2">Siapa yang membuat Kojet AI?</h3>
-      <p className="text-gray-400 text-sm leading-relaxed">Kojet AI dibuat oleh Fajar (@faajharr_), mahasiswa Teknik Elektro Universitas Tanjungpura.</p>
-    </div>
-  </div>
-</div>
         
+        {/* --- CARA KERJA --- */}
+        <section className="max-w-7xl mx-auto px-6 py-16 md:py-24 border-t border-white/5 relative z-10 w-full">
+          <div className="text-left md:text-center mb-10 md:mb-16">
+            <h2 className="text-3xl md:text-5xl font-bold mb-4 tracking-tight">Cara <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500">Kerjanya</span></h2>
+            <p className="text-gray-400 text-sm md:text-lg max-w-2xl md:mx-auto">Tiga langkah singkat dari buka Kojet AI sampai jawabanmu siap dipakai.</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+            {[
+              { no: "1", title: "Buka Kojet AI", desc: "Klik tombol Mulai Sekarang untuk masuk ke ruang obrolan. Tampilannya simpel dan nyaman di HP maupun laptop." },
+              { no: "2", title: "Tulis atau Unggah", desc: "Ketik pertanyaanmu, bicara lewat mikrofon, atau lampirkan dokumen dan file kode yang mau dibahas." },
+              { no: "3", title: "Dapat Jawaban", desc: "Jawaban muncul dalam hitungan detik. Salin, dengarkan dibacakan, atau simpan ke Word dan PDF." },
+            ].map((step) => (
+              <div key={step.no} className="bg-[#12141c]/80 p-6 md:p-8 rounded-3xl border border-white/5 text-left">
+                <div className="w-10 h-10 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 font-bold flex items-center justify-center mb-4">{step.no}</div>
+                <h3 className="text-lg md:text-xl font-bold mb-2 text-gray-100">{step.title}</h3>
+                <p className="text-gray-400 leading-relaxed text-xs md:text-sm">{step.desc}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* --- KEMAMPUAN LENGKAP --- */}
+        <section className="max-w-7xl mx-auto px-6 py-16 md:py-24 border-t border-white/5 relative z-10 w-full">
+          <div className="text-left md:text-center mb-10 md:mb-16">
+            <h2 className="text-3xl md:text-5xl font-bold mb-4 tracking-tight">Yang Bisa Kamu <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">Lakukan</span></h2>
+            <p className="text-gray-400 text-sm md:text-lg max-w-2xl md:mx-auto">Bukan cuma tanya jawab. Kojet AI membantu pekerjaan sehari-hari mulai dari tugas kuliah sampai proyek koding.</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            {[
+              { Icon: Lucide.Code, title: "Bantu Koding", desc: "Tanya soal error, minta contoh kode, atau unggah file .js, .py, .html, dan .css untuk dianalisis." },
+              { Icon: Lucide.FileUp, title: "Baca Dokumen", desc: "Unggah PDF, Word, atau file teks, lalu minta ringkasan atau tanyakan isi dokumennya." },
+              { Icon: Lucide.ImagePlus, title: "Buat Gambar", desc: "Tulis gambar seperti apa yang kamu bayangkan, dan Kojet AI membuatkannya untukmu." },
+              { Icon: Lucide.Mic, title: "Input Suara", desc: "Malas mengetik? Bicara saja lewat mikrofon dan pertanyaanmu langsung diubah jadi teks." },
+              { Icon: Lucide.Volume2, title: "Jawaban Dibacakan", desc: "Dengarkan jawaban dibacakan, cocok saat kamu sedang sibuk atau mau istirahat dari layar." },
+              { Icon: Lucide.FileText, title: "Simpan ke Word & PDF", desc: "Ubah jawaban jadi file Word atau PDF, siap dipakai untuk catatan, tugas, atau laporan." },
+            ].map((item) => (
+              <div key={item.title} className="bg-[#12141c]/80 p-6 rounded-3xl border border-white/5 hover:border-indigo-500/30 transition-all flex gap-4 items-start text-left">
+                <div className="w-12 h-12 shrink-0 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 flex items-center justify-center">
+                  <item.Icon size={22} />
+                </div>
+                <div>
+                  <h3 className="text-base md:text-lg font-bold mb-1 text-gray-100">{item.title}</h3>
+                  <p className="text-gray-400 leading-relaxed text-xs md:text-sm">{item.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* --- FAQ --- */}
+        <section className="max-w-3xl mx-auto px-6 py-16 md:py-24 border-t border-white/5 relative z-10 w-full">
+          <h2 className="text-3xl md:text-4xl font-bold mb-8 md:mb-10 tracking-tight text-left md:text-center">Pertanyaan yang Sering Diajukan</h2>
+          <div className="space-y-6 text-left">
+            {[
+              { q: "Apa itu Kojet AI?", a: "Kojet AI adalah asisten AI berbahasa Indonesia untuk membantu koding, membaca dokumen PDF dan Word, membuat gambar, dan menjawab pertanyaan sehari-hari." },
+              { q: "Siapa yang membuat Kojet AI?", a: "Kojet AI dibuat oleh Fajar (@faajharr_), mahasiswa Teknik Elektro Universitas Tanjungpura." },
+              { q: "Apakah Kojet AI bisa membaca dokumen?", a: "Bisa. Unggah file PDF, Word (.docx), atau file teks dan kode seperti .txt, .js, .py, .html, dan .css, lalu tanyakan isinya atau minta ringkasan." },
+              { q: "Apakah Kojet AI bisa membuat gambar?", a: "Bisa. Tulis deskripsi gambar yang kamu inginkan di kolom obrolan, atau gunakan tombol Generate Foto yang tersedia di ruang chat." },
+              { q: "Apakah bisa dipakai dengan suara?", a: "Bisa. Tekan ikon mikrofon untuk berbicara, dan jawaban dari Kojet AI juga bisa dibacakan. Fitur suara bergantung pada dukungan browser, dan paling lancar di Google Chrome." },
+              { q: "Apakah jawabannya bisa disimpan?", a: "Bisa. Jawaban dapat disalin, atau disimpan sebagai file Word dan PDF untuk catatan, tugas, maupun laporan." },
+              { q: "Apakah bisa bertanya dengan bahasa sehari-hari?", a: "Bisa. Kojet AI dibuat untuk pengguna Indonesia, jadi kamu boleh bertanya dengan bahasa santai seperti ngobrol biasa." },
+            ].map((item) => (
+              <div key={item.q}>
+                <h3 className="text-lg font-bold text-gray-100 mb-2">{item.q}</h3>
+                <p className="text-gray-400 text-sm md:text-base leading-relaxed">{item.a}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* --- AJAKAN AKHIR --- */}
+        <section className="px-6 py-16 md:py-24 border-t border-white/5 relative z-10 w-full text-center">
+          <h2 className="text-3xl md:text-5xl font-bold mb-4 tracking-tight">Siap Coba Kojet AI?</h2>
+          <p className="text-gray-400 text-sm md:text-lg max-w-xl mx-auto mb-8">Tanya apa saja, unggah dokumen, atau minta dibuatkan gambar. Semuanya bisa dimulai dari satu obrolan.</p>
+          <button
+            onClick={() => setViewMode("chat")}
+            className="group inline-flex items-center justify-center gap-3 bg-blue-600 text-white px-8 py-4 rounded-full text-base md:text-lg font-bold transition-all hover:bg-blue-500 hover:scale-105"
+          >
+            Mulai Sekarang <Lucide.ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+          </button>
+        </section>
+
         <footer className="text-center py-8 text-gray-500 text-xs md:text-sm border-t border-white/5 relative z-10">
           <p>&copy; {new Date().getFullYear()} Kojet AI. Diciptakan oleh Fajar (@faajharr_)</p>
           <p className="mt-1 opacity-60">Mahasiswa Teknik Elektro Universitas Tanjungpura - Sambas</p>
